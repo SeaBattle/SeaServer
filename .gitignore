@@ -1,0 +1,5 @@
+ebin
+out
+.idea
+*.iml
+rel/seaserver
