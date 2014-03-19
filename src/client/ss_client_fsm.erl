@@ -18,8 +18,8 @@
 
 %% gen_fsm callbacks
 -export([init/1,
-	state_name/2,
-	state_name/3,
+	authorize/2,
+	authorize/3,
 	handle_event/3,
 	handle_sync_event/4,
 	handle_info/3,
@@ -67,25 +67,22 @@ init(Socket) ->
 	io:format("~w: has started (~w) with ~p~n", [?MODULE, self(), Socket]),
 	% Поток отправляет себе сообщение с указанием принять соединение
 	gen_fsm:send_all_state_event(self(), accept),
-	{ok, state_name, #client_state{socket = Socket}}.
+	{ok, authorize, #client_state{socket = Socket}}.
 
 %%--------------------------------------------------------------------
 %% @private
 %% @doc
-%% There should be one instance of this function for each possible
-%% state name. Whenever a gen_fsm receives an event sent using
-%% gen_fsm:send_event/2, the instance of this function with the same
-%% name as the current state name StateName is called to handle
-%% the event. It is also called if a timeout occurs.
+%% Авторизовывает
 %%
 %% @end
 %%--------------------------------------------------------------------
--spec(state_name(_Event, _State) ->
+-spec(authorize(_Event, _State) ->
 	{next_state, NextStateName :: atom(), NextState :: #client_state{}} |
 	{next_state, NextStateName :: atom(), NextState :: #client_state{},
 		timeout() | hibernate} |
 	{stop, Reason :: term(), NewState :: #client_state{}}).
-state_name(_Event, State) ->
+authorize(Event, State) ->
+	io:format("~w got ~w, ~p~n", [?MODULE, Event, Event]),
 	{next_state, state_name, State}.
 
 %%--------------------------------------------------------------------
@@ -99,7 +96,7 @@ state_name(_Event, State) ->
 %%
 %% @end
 %%--------------------------------------------------------------------
--spec(state_name(Event :: term(), From :: {pid(), term()},
+-spec(authorize(Event :: term(), From :: {pid(), term()},
 		State :: #client_state{}) ->
 	{next_state, NextStateName :: atom(), NextState :: #client_state{}} |
 	{next_state, NextStateName :: atom(), NextState :: #client_state{},
@@ -110,7 +107,8 @@ state_name(_Event, State) ->
 	{stop, Reason :: normal | term(), NewState :: #client_state{}} |
 	{stop, Reason :: normal | term(), Reply :: term(),
 		NewState :: #client_state{}}).
-state_name(_Event, _From, State) ->
+authorize(Event, _From, State) ->
+	io:format("~w got ~w, ~p~n", [?MODULE, Event, Event]),
 	Reply = ok,
 	{reply, Reply, state_name, State}.
 
@@ -132,12 +130,8 @@ state_name(_Event, _From, State) ->
 handle_event(accept, StateName, #client_state{socket = ListenSocket}) ->
 	% принимаем соединение. Если ok - приняли. Если ошибка, то будет exception
 	{ok, AcceptSocket} = gen_tcp:accept(ListenSocket),
-
-	io:format("~w: connection accepted on worker ~p with Soket(~w)~n", [?MODULE, self(), AcceptSocket]),
-
-% стартуем новый слушающий поток
+	% стартуем новый слушающий поток
 	ss_client_sup:start_socket(),
-	gen_tcp:send(AcceptSocket, <<"Hello">>),
 	{next_state, StateName, #client_state{socket = AcceptSocket}};
 handle_event(_Event, StateName, State) ->
 	io:format("~w: Unknown event (~w)~n", [?MODULE, _Event]),
