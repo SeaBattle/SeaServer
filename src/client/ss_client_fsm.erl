@@ -42,7 +42,7 @@
 %%--------------------------------------------------------------------
 -spec(start_link(_Socket) -> {ok, pid()} | ignore | {error, Reason :: term()}).
 start_link(Socket) ->
-	gen_fsm:start_link({local, ?SERVER}, ?MODULE, [Socket], []).
+  gen_fsm:start_link({local, ?SERVER}, ?MODULE, Socket, []).
 
 %%%===================================================================
 %%% gen_fsm callbacks
@@ -58,11 +58,11 @@ start_link(Socket) ->
 %% @end
 %%--------------------------------------------------------------------
 -spec(init(Args :: term()) ->
-	{ok, StateName :: atom(), StateData :: #client_state{}} |
-	{ok, StateName :: atom(), StateData :: #client_state{}, timeout() | hibernate} |
-	{stop, Reason :: term()} | ignore).
+  {ok, StateName :: atom(), StateData :: #client_state{}} |
+  {ok, StateName :: atom(), StateData :: #client_state{}, timeout() | hibernate} |
+  {stop, Reason :: term()} | ignore).
 init(Socket) ->
-	% Поток ловит ошибки связанных процессов
+  % Поток ловит ошибки связанных процессов
 %% 	erlang:process_flag(trap_exit, true),
 	io:format("~w: has started (~w) with ~p~n", [?MODULE, self(), Socket]),
 	% Поток отправляет себе сообщение с указанием принять соединение
@@ -122,11 +122,11 @@ authorize(Event, _From, State) ->
 %% @end
 %%--------------------------------------------------------------------
 -spec(handle_event(Event :: term(), StateName :: atom(),
-		StateData :: #client_state{}) ->
-	{next_state, NextStateName :: atom(), NewStateData :: #client_state{}} |
-	{next_state, NextStateName :: atom(), NewStateData :: #client_state{},
-		timeout() | hibernate} |
-	{stop, Reason :: term(), NewStateData :: #client_state{}}).
+    StateData :: #client_state{}) ->
+  {next_state, NextStateName :: atom(), NewStateData :: #client_state{}} |
+  {next_state, NextStateName :: atom(), NewStateData :: #client_state{},
+    timeout() | hibernate} |
+  {stop, Reason :: term(), NewStateData :: #client_state{}}).
 handle_event(accept, StateName, #client_state{socket = ListenSocket}) ->
 	% принимаем соединение. Если ok - приняли. Если ошибка, то будет exception
 	{ok, AcceptSocket} = gen_tcp:accept(ListenSocket),
@@ -134,8 +134,8 @@ handle_event(accept, StateName, #client_state{socket = ListenSocket}) ->
 	ss_client_sup:start_socket(),
 	{next_state, StateName, #client_state{socket = AcceptSocket}};
 handle_event(_Event, StateName, State) ->
-	io:format("~w: Unknown event (~w)~n", [?MODULE, _Event]),
-	{next_state, StateName, State}.
+  io:format("~w: Unknown event (~w)~n", [?MODULE, _Event]),
+  {next_state, StateName, State}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -147,18 +147,18 @@ handle_event(_Event, StateName, State) ->
 %% @end
 %%--------------------------------------------------------------------
 -spec(handle_sync_event(Event :: term(), From :: {pid(), Tag :: term()},
-		StateName :: atom(), StateData :: term()) ->
-	{reply, Reply :: term(), NextStateName :: atom(), NewStateData :: term()} |
-	{reply, Reply :: term(), NextStateName :: atom(), NewStateData :: term(),
-		timeout() | hibernate} |
-	{next_state, NextStateName :: atom(), NewStateData :: term()} |
-	{next_state, NextStateName :: atom(), NewStateData :: term(),
-		timeout() | hibernate} |
-	{stop, Reason :: term(), Reply :: term(), NewStateData :: term()} |
-	{stop, Reason :: term(), NewStateData :: term()}).
+    StateName :: atom(), StateData :: term()) ->
+  {reply, Reply :: term(), NextStateName :: atom(), NewStateData :: term()} |
+  {reply, Reply :: term(), NextStateName :: atom(), NewStateData :: term(),
+    timeout() | hibernate} |
+  {next_state, NextStateName :: atom(), NewStateData :: term()} |
+  {next_state, NextStateName :: atom(), NewStateData :: term(),
+    timeout() | hibernate} |
+  {stop, Reason :: term(), Reply :: term(), NewStateData :: term()} |
+  {stop, Reason :: term(), NewStateData :: term()}).
 handle_sync_event(_Event, _From, StateName, State) ->
-	Reply = ok,
-	{reply, Reply, StateName, State}.
+  Reply = ok,
+  {reply, Reply, StateName, State}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -170,14 +170,14 @@ handle_sync_event(_Event, _From, StateName, State) ->
 %% @end
 %%--------------------------------------------------------------------
 -spec(handle_info(Info :: term(), StateName :: atom(),
-		StateData :: term()) ->
-	{next_state, NextStateName :: atom(), NewStateData :: term()} |
-	{next_state, NextStateName :: atom(), NewStateData :: term(),
-		timeout() | hibernate} |
-	{stop, Reason :: normal | term(), NewStateData :: term()}).
+    StateData :: term()) ->
+  {next_state, NextStateName :: atom(), NewStateData :: term()} |
+  {next_state, NextStateName :: atom(), NewStateData :: term(),
+    timeout() | hibernate} |
+  {stop, Reason :: normal | term(), NewStateData :: term()}).
 handle_info(_Info, StateName, State) ->
-	io:format("~w unknown event: (~w)~n", [?MODULE, _Info]),
-	{next_state, StateName, State}.
+  io:format("~w unknown event: (~w)~n", [?MODULE, _Info]),
+  {next_state, StateName, State}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -192,7 +192,7 @@ handle_info(_Info, StateName, State) ->
 -spec(terminate(Reason :: normal | shutdown | {shutdown, term()}
 | term(), StateName :: atom(), StateData :: term()) -> term()).
 terminate(_Reason, _StateName, _State) ->
-	ok.
+  ok.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -202,10 +202,10 @@ terminate(_Reason, _StateName, _State) ->
 %% @end
 %%--------------------------------------------------------------------
 -spec(code_change(OldVsn :: term() | {down, term()}, StateName :: atom(),
-		StateData :: #client_state{}, Extra :: term()) ->
-	{ok, NextStateName :: atom(), NewStateData :: #client_state{}}).
+    StateData :: #client_state{}, Extra :: term()) ->
+  {ok, NextStateName :: atom(), NewStateData :: #client_state{}}).
 code_change(_OldVsn, StateName, State, _Extra) ->
-	{ok, StateName, State}.
+  {ok, StateName, State}.
 
 %%%===================================================================
 %%% Internal functions

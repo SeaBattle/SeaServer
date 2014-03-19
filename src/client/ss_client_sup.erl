@@ -60,11 +60,11 @@ start_link() ->
 	{error, Reason :: term()}).
 init([]) ->
 	Port = seaserver_app:get_conf_param(port, 4232),
-	io:fwrite("~w:Listening on port ~p~n", [?MODULE, Port]),
-	Opts = [binary, {active, true}, {reuseaddr, true}],
+	Opts = [{active, true}, {reuseaddr, true}, binary],
 	case gen_tcp:listen(Port, Opts) of
 		{ok, ListenSocket} ->
-			RestartStrategy = {simple_one_for_one, 10, 60}, %TODO нужен ли здесь перезапуск? (если мы теряем соединение в случае отказа рабочего)
+      io:fwrite("~w:Listening on port ~p~n", [?MODULE, Port]),
+			RestartStrategy = {simple_one_for_one, 10, 60},
 			Listener = {ss_client_fsm, {ss_client_fsm, start_link, [ListenSocket]},
 				temporary, 2000, worker, [ss_client_fsm]},
 			Children = [Listener],
