@@ -81,19 +81,25 @@ init(Socket) -> %TODO протестировать ситуацию с подк�
 	{next_state, NextStateName :: atom(), NextState :: #client_state{},
 		timeout() | hibernate} |
 	{stop, Reason :: term(), NewState :: #client_state{}}).
-authorize({tcp, _, Packet}, State) ->
-	io:format("~w Raw ~w~n", [?MODULE, Packet]),
+authorize({tcp, _, Packet}, State = #client_state{socket = Socket}) ->
 	%TODO try-catch?
 	{Type, ProtocolVersion, ApiVersion, Body} = ss_auth_packet:parse_packet(Packet),
-	Result = ss_auth_man:make_auth(Type, Body),  %TODO function clause?
+	io:format("~w got packet ~w, PV[~w], AV[~w], Body[~p]~n", [?MODULE, Type, ProtocolVersion, ApiVersion, Body]),
+	case
+	ss_auth_man:make_auth(Type, Body) of
+		ok ->
+			BinaryType = ss_main_packet:get_packet_by_type(auth_resp_packet),
+			ServerProtocolVersion = seaserver_app:get_conf_param(protocol, 1),
+			gen_tcp:send(Socket, <<BinaryType:8/little-unit:4, ServerProtocolVersion:8/little-unit:4, 1>>);
+		_ ->
+			gen_tcp:send(Socket, Body)  %TODO error packet!
+	end,
 %% 	try
 %% 	    ss_auth_packet:parse_packet(Packet)
 %% 	catch
 %% 	    :  ->
 %% 	end
-	io:format("~w got packet ~w, PV[~w], AV[~w], Body[~p]~n", [?MODULE, Type, ProtocolVersion, ApiVersion, Body]),
-
-	{next_state, state_name, State}.
+	{next_state, connected, State}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -216,6 +222,7 @@ terminate(normal, _, _) ->
 	ok;
 terminate(_Reason, _, #client_state{socket = _Sock}) ->
 	io:format("Error in ~p[~p]! terminate reason: ~p~n", [?MODULE, self(), _Reason]),
+	%TODO возможно здесь стоит закрыть сокет если он ещё не закрыт
 	%TODO скорее всего здесь также нужно уведомить других клиентов об ошибке и отключении этого клиента
 	ok.
 

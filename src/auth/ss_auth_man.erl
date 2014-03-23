@@ -12,5 +12,5 @@
 %% API
 -export([make_auth/2]).
 
-make_auth(1, {Uid}) -> ok;
-make_auth(2, {Login, Password}) -> ok.
+make_auth(guest_auth_packet, {Uid}) -> ok;
+make_auth(login_auth_packet, {Login, Password}) -> ok.

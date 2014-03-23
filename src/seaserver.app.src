@@ -8,5 +8,5 @@
                   stdlib
                  ]},
   {mod, { seaserver_app, []}},
-  {env, [{port, 4232}]}
+  {env, [{port, 4232}, {protocol, 1}]}
  ]}.
