@@ -61,7 +61,7 @@ start_link(Socket) ->
 	{ok, StateName :: atom(), StateData :: #client_state{}} |
 	{ok, StateName :: atom(), StateData :: #client_state{}, timeout() | hibernate} |
 	{stop, Reason :: term()} | ignore).
-init(Socket) ->
+init(Socket) -> %TODO протестировать ситуацию с подключением и быстрым закрытием сокета. Будет ли при этом упущен tcp_closed?
 	% Поток ловит ошибки связанных процессов
 %% 	erlang:process_flag(trap_exit, true),
 	io:format("~w: has started (~w) with ~p~n", [?MODULE, self(), Socket]),
@@ -72,7 +72,7 @@ init(Socket) ->
 %%--------------------------------------------------------------------
 %% @private
 %% @doc
-%% Авторизовывает
+%% Авторизовывает пользователя
 %%
 %% @end
 %%--------------------------------------------------------------------
@@ -81,8 +81,11 @@ init(Socket) ->
 	{next_state, NextStateName :: atom(), NextState :: #client_state{},
 		timeout() | hibernate} |
 	{stop, Reason :: term(), NewState :: #client_state{}}).
-authorize(Event, State) ->
-	io:format("~w got async ~w~n", [?MODULE, Event]),
+authorize({tcp, _, Packet}, State) ->
+	io:format("~w Raw ~w~n", [?MODULE, Packet]),
+	<<Header:4/little-unit:8, ProtocolVersion:4/little-unit:8, ApiVersion:4/little-unit:8, Rest/binary>> = Packet,
+	io:format("~w got packet ~w, PV[~w], AV[~w], Rest[~w]~n", [?MODULE, Header, ProtocolVersion, ApiVersion, Rest]),
+
 	{next_state, state_name, State}.
 
 %%--------------------------------------------------------------------
@@ -127,9 +130,10 @@ authorize(Event, _From, State) ->
 	{next_state, NextStateName :: atom(), NewStateData :: #client_state{},
 		timeout() | hibernate} |
 	{stop, Reason :: term(), NewStateData :: #client_state{}}).
-handle_event(accept, StateName, #client_state{socket = ListenSocket}) ->
+handle_event(accept, StateName, #client_state{socket = ListenSocket}) ->  %TODO клиент подключается только 1 раз 0_о
 	% принимаем соединение. Если ok - приняли. Если ошибка, то будет exception
 	{ok, AcceptSocket} = gen_tcp:accept(ListenSocket),
+	io:format("~w new connection!~n", [?MODULE]),
 	% стартуем новый слушающий поток
 	ss_client_sup:start_socket(),
 	{next_state, StateName, #client_state{socket = AcceptSocket}};
@@ -175,13 +179,14 @@ handle_sync_event(_Event, _From, StateName, State) ->
 	{next_state, NextStateName :: atom(), NewStateData :: term(),
 		timeout() | hibernate} |
 	{stop, Reason :: normal | term(), NewStateData :: term()}).
-handle_info(Info = {tcp, _, _}, StateName, State) -> ?MODULE:StateName(Info, State);
-handle_info({tcp_closed,_}, _, State=#client_state{socket = Socket}) ->
+handle_info(Info = {tcp, _, _}, StateName, State) ->	?MODULE:StateName(Info, State);
+handle_info({tcp_closed, _}, _, State = #client_state{socket = Socket}) ->
+	io:format("~w Client ~w disconnected~n", [?MODULE, Socket]),
 	gen_tcp:close(Socket),  %TODO возможно здесь нужно не просто закрывать сокет, но уведомлять остальных об отключении клиента
 	{stop, normal, State};
-handle_info({tcp_error, Socket, _}, _, State) ->
+handle_info({tcp_error, Socket, Message}, _, State) ->
 	gen_tcp:close(Socket),
-	io:format("tcp_error~n"),
+	io:format("tcp_error: ~w~n", [Message]),
 	{stop, normal, State};
 handle_info(_Info, StateName, State) ->
 	io:format("~w stateName ~w, state ~w unknown event: (~w)~n", [?MODULE, StateName, State, _Info]),
@@ -202,7 +207,7 @@ handle_info(_Info, StateName, State) ->
 terminate(normal, _, _) ->
 	io:format("Normal terminate~n"),
 	ok;
-terminate(_Reason, _, #client_state{socket = Sock}) ->
+terminate(_Reason, _, #client_state{socket = _Sock}) ->
 	io:format("Error in ~p[~p]! terminate reason: ~p~n", [?MODULE, self(), _Reason]),
 	%TODO скорее всего здесь также нужно уведомить других клиентов об ошибке и отключении этого клиента
 	ok.
