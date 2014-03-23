@@ -83,8 +83,15 @@ init(Socket) -> %TODO протестировать ситуацию с подк�
 	{stop, Reason :: term(), NewState :: #client_state{}}).
 authorize({tcp, _, Packet}, State) ->
 	io:format("~w Raw ~w~n", [?MODULE, Packet]),
-	<<Header:4/little-unit:8, ProtocolVersion:4/little-unit:8, ApiVersion:4/little-unit:8, Rest/binary>> = Packet,
-	io:format("~w got packet ~w, PV[~w], AV[~w], Rest[~w]~n", [?MODULE, Header, ProtocolVersion, ApiVersion, Rest]),
+	%TODO try-catch?
+	{Type, ProtocolVersion, ApiVersion, Body} = ss_auth_packet:parse_packet(Packet),
+	Result = ss_auth_man:make_auth(Type, Body),  %TODO function clause?
+%% 	try
+%% 	    ss_auth_packet:parse_packet(Packet)
+%% 	catch
+%% 	    :  ->
+%% 	end
+	io:format("~w got packet ~w, PV[~w], AV[~w], Body[~p]~n", [?MODULE, Type, ProtocolVersion, ApiVersion, Body]),
 
 	{next_state, state_name, State}.
 
@@ -179,7 +186,7 @@ handle_sync_event(_Event, _From, StateName, State) ->
 	{next_state, NextStateName :: atom(), NewStateData :: term(),
 		timeout() | hibernate} |
 	{stop, Reason :: normal | term(), NewStateData :: term()}).
-handle_info(Info = {tcp, _, _}, StateName, State) ->	?MODULE:StateName(Info, State);
+handle_info(Info = {tcp, _, _}, StateName, State) -> ?MODULE:StateName(Info, State);
 handle_info({tcp_closed, _}, _, State = #client_state{socket = Socket}) ->
 	io:format("~w Client ~w disconnected~n", [?MODULE, Socket]),
 	gen_tcp:close(Socket),  %TODO возможно здесь нужно не просто закрывать сокет, но уведомлять остальных об отключении клиента
