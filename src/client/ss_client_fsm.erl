@@ -84,21 +84,19 @@ init(Socket) -> %TODO протестировать ситуацию с подк�
 authorize({tcp, _, Packet}, State = #client_state{socket = Socket}) ->
 	%TODO try-catch?
 	{Type, ProtocolVersion, ApiVersion, Body} = ss_auth_packet:parse_packet(Packet),
-	io:format("~w got packet ~w, PV[~w], AV[~w], Body[~p]~n", [?MODULE, Type, ProtocolVersion, ApiVersion, Body]),
-	case
-	ss_auth_man:make_auth(Type, Body) of
-		ok ->
-			BinaryType = ss_main_packet:get_packet_by_type(auth_resp_packet),
-			ServerProtocolVersion = seaserver_app:get_conf_param(protocol, 1),
-			gen_tcp:send(Socket, <<BinaryType:8/little-unit:4, ServerProtocolVersion:8/little-unit:4, 1>>);
-		_ ->
-			gen_tcp:send(Socket, Body)  %TODO error packet!
-	end,
-%% 	try
+	%% 	try
 %% 	    ss_auth_packet:parse_packet(Packet)
 %% 	catch
 %% 	    :  ->
 %% 	end
+	io:format("~w got packet ~w, PV[~w], AV[~w], Body[~p]~n", [?MODULE, Type, ProtocolVersion, ApiVersion, Body]),
+	case
+	ss_auth_man:make_auth(Type, Body) of
+		ok ->
+			ss_main_packet:send_packet(auth_resp_packet, Socket, 1);
+		Response ->
+			ss_main_packet:send_packet(error_packet, Socket, Response)
+	end,
 	{next_state, connected, State}.
 
 %%--------------------------------------------------------------------

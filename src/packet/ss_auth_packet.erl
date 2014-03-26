@@ -19,4 +19,8 @@ parse_packet(<<Type:8/little-unit:4, ProtocolVersion:8/little-unit:4, ApiVersion
 %login_auth_packet type 2
 parse_packet(<<Type:8/little-unit:4, ProtocolVersion:8/little-unit:4, ApiVersion:8/little-unit:4, Login:1/binary-unit:30, Password:1/binary-unit:30>>)
 	when Type == 2 ->
-	{login_auth_packet, ProtocolVersion, ApiVersion, {Login, Password}}.
+	{login_auth_packet, ProtocolVersion, ApiVersion, {Login, Password}};
+%error packet type 4
+parse_packet(<<Type:8/little-unit:4, ProtocolVersion:8/little-unit:4, ApiVersion:8/little-unit:4, Message/bitstring>>)
+	when Type == 4 ->
+	{error_packet, ProtocolVersion, ApiVersion, {Message}}.

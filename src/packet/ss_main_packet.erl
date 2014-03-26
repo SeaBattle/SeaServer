@@ -10,7 +10,17 @@
 -author("tihon").
 
 %% API
--export([get_type_by_packet/1, get_packet_by_type/1]).
+-export([get_type_by_packet/1, get_packet_by_type/1, send_packet/3]).
+
+send_packet(Type, Socket, Packet) when is_binary(Packet) ->
+	BinaryType = ss_main_packet:get_packet_by_type(Type),
+	ServerProtocolVersion = seaserver_app:get_conf_param(protocol, 1),
+	io:format("Packet's argument: ~w~n", [Packet]),
+
+	gen_tcp:send(Socket, <<BinaryType:8/little-unit:4, ServerProtocolVersion:8/little-unit:4, Packet/binary>>);
+send_packet(Type, Socket, Packet) ->
+	send_packet(Type, Socket, term_to_binary(Packet)).
+
 
 %%--------------------------------------------------------------------
 %% @private
@@ -19,8 +29,11 @@
 %%
 %% @end
 %%--------------------------------------------------------------------
+%TODO подумать над какой-нибудь структурой данных в виде дерева, чтобы не писать вручную для каждого пакета соответствие int-тип
 get_type_by_packet(1) -> guest_auth_packet;
-get_type_by_packet(2) -> login_auth_packet.
+get_type_by_packet(2) -> login_auth_packet;
+get_type_by_packet(3) -> auth_resp_packet;
+get_type_by_packet(4) -> error_packet.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -31,5 +44,6 @@ get_type_by_packet(2) -> login_auth_packet.
 %%--------------------------------------------------------------------
 get_packet_by_type(guest_auth_packet) -> 1;
 get_packet_by_type(login_auth_packet) -> 2;
-get_packet_by_type(auth_resp_packet) -> 3.
+get_packet_by_type(auth_resp_packet) -> 3;
+get_packet_by_type(error_packet) -> 4.
 
