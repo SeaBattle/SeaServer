@@ -11,15 +11,23 @@
 
 %% API
 -export([get_type_by_packet/1, get_packet_by_type/1, send_packet/3]).
-
+%TODO подумать на свежую голову, как это можно упростить. (Ввести стандарты и т.п.)
+send_packet(Type, Socket, Packet) when is_tuple(Packet) ->
+	send_packet(Type, Socket, tuple_to_list(Packet));
+send_packet(Type, Socket, Packet) when is_list(Packet) ->
+	F = fun(X, Acc) ->
+		if is_integer(X) -> [<<X:8/unit:4>> | Acc];
+			true -> [X | Acc]
+		end
+	end,
+	List = lists:reverse(lists:foldl(F, [], Packet)),
+	send_packet(Type, Socket, list_to_binary(List));
 send_packet(Type, Socket, Packet) when is_binary(Packet) ->
 	BinaryType = ss_main_packet:get_packet_by_type(Type),
 	ServerProtocolVersion = seaserver_app:get_conf_param(protocol, 1),
-	io:format("Packet's argument: ~w~n", [Packet]),
-
-	gen_tcp:send(Socket, <<BinaryType:8/little-unit:4, ServerProtocolVersion:8/little-unit:4, Packet/binary>>);
+	gen_tcp:send(Socket, <<BinaryType:8/unit:4, ServerProtocolVersion:8/unit:4, Packet/binary>>);
 send_packet(Type, Socket, Packet) ->
-	send_packet(Type, Socket, term_to_binary(Packet)).
+	send_packet(Type, Socket, [Packet]).
 
 
 %%--------------------------------------------------------------------
