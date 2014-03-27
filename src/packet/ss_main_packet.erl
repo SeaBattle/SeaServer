@@ -11,12 +11,17 @@
 
 %% API
 -export([get_type_by_packet/1, get_packet_by_type/1, send_packet/3]).
+
+parse_packet(Binary) -> ok.
+
+
+
 %TODO подумать на свежую голову, как это можно упростить. (Ввести стандарты и т.п.)
 send_packet(Type, Socket, Packet) when is_tuple(Packet) ->
 	send_packet(Type, Socket, tuple_to_list(Packet));
 send_packet(Type, Socket, Packet) when is_list(Packet) ->
 	F = fun(X, Acc) ->
-		if is_integer(X) -> [<<X:8/unit:4>> | Acc];
+		if is_integer(X) -> [<<X:8/unit:4>> | Acc]; %TODO можно ли кодировать целые числа как-нибудь по-другому (не бегая по листу)
 			true -> [X | Acc]
 		end
 	end,

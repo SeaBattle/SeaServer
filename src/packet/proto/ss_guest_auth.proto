@@ -1,0 +1,10 @@
+message guest_auth {
+    required Header header = 1;
+    required string uid = 2;
+}
+
+message Header {
+    required int32 type = 1;
+    required int32 protocol = 2;
+    required int32 apiVersion = 3;
+}
