@@ -1,0 +1,6 @@
+message Header {
+    required int32 type = 1;
+    required int32 protocol = 2;
+    required int32 apiVersion = 3;
+    required bytes packet = 4;
+}

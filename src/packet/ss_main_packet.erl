@@ -9,54 +9,36 @@
 -module(ss_main_packet).
 -author("tihon").
 
+-include("ss_packet_header_pb.hrl").
+-include("ss_guest_auth_pb.hrl").
+
 %% API
--export([get_type_by_packet/1, get_packet_by_type/1, send_packet/3]).
+-export([parse_header/1, parse_packet/1, send_packet/3]).
 
-parse_packet(Binary) -> ok.
+parse_header(Binary) ->
+	{_, Type, Protocol, Api, Packet} = ss_packet_header_pb:decode_header(Binary),
+	{Type, Protocol, Api, Packet}.
+parse_packet(Binary) ->
+	{TypeInt, Protocol, Api, RawPacket} = parse_header(Binary),
+	{Type, Packet} = parse_body(TypeInt, RawPacket),
+	{Type, Protocol, Api, {Packet}}.
 
+% guest_auth_packet
+parse_body(1, Binary) ->
+	ss_guest_auth_pb:decode_guest_auth(Binary).
 
+% error packet
+send_packet(Type, Socket, {Code, Message}) when Type == error_packet->
+	Protocol = seaserver_app:get_conf_param(protocol, 1),
+	MinApi = seaserver_app:get_conf_param(min_api, 1),
+	Binary = ss_error_packet_pb:encode_error_packet({Type, Code, Message}),
+	Packet = ss_packet_header_pb:encode_header({header, 4, Protocol, MinApi, Binary}),
+	gen_tcp:send(Socket, Packet);
+send_packet(Packet, Socket, {}) -> ok.
 
-%TODO подумать на свежую голову, как это можно упростить. (Ввести стандарты и т.п.)
-send_packet(Type, Socket, Packet) when is_tuple(Packet) ->
-	send_packet(Type, Socket, tuple_to_list(Packet));
-send_packet(Type, Socket, Packet) when is_list(Packet) ->
-	F = fun(X, Acc) ->
-		if is_integer(X) -> [<<X:8/unit:4>> | Acc]; %TODO можно ли кодировать целые числа как-нибудь по-другому (не бегая по листу)
-			true -> [X | Acc]
-		end
-	end,
-	List = lists:reverse(lists:foldl(F, [], Packet)),
-	send_packet(Type, Socket, list_to_binary(List));
-send_packet(Type, Socket, Packet) when is_binary(Packet) ->
-	BinaryType = ss_main_packet:get_packet_by_type(Type),
-	ServerProtocolVersion = seaserver_app:get_conf_param(protocol, 1),
-	gen_tcp:send(Socket, <<BinaryType:8/unit:4, ServerProtocolVersion:8/unit:4, Packet/binary>>);
-send_packet(Type, Socket, Packet) ->
-	send_packet(Type, Socket, [Packet]).
-
-
-%%--------------------------------------------------------------------
-%% @private
-%% @doc
-%% Получает атом тип пакета из целочисленного значения
+%% guest_auth -- 1
+%% login_auth -- 2
+%% auth_resp -- 3
+%% error_packet -- 4
 %%
-%% @end
-%%--------------------------------------------------------------------
-%TODO подумать над какой-нибудь структурой данных в виде дерева, чтобы не писать вручную для каждого пакета соответствие int-тип
-get_type_by_packet(1) -> guest_auth_packet;
-get_type_by_packet(2) -> login_auth_packet;
-get_type_by_packet(3) -> auth_resp_packet;
-get_type_by_packet(4) -> error_packet.
-
-%%--------------------------------------------------------------------
-%% @private
-%% @doc
-%% Получает целочисленное значение пакета из атома типа
 %%
-%% @end
-%%--------------------------------------------------------------------
-get_packet_by_type(guest_auth_packet) -> 1;
-get_packet_by_type(login_auth_packet) -> 2;
-get_packet_by_type(auth_resp_packet) -> 3;
-get_packet_by_type(error_packet) -> 4.
-
