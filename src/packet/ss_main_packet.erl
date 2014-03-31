@@ -33,8 +33,7 @@ send_packet(Type, Socket, {Code, Message}) when Type == error_packet->
 	MinApi = seaserver_app:get_conf_param(min_api, 1),
 	Binary = ss_error_packet_pb:encode_error_packet({Type, Code, Message}),
 	Packet = ss_packet_header_pb:encode_header({header, 4, Protocol, MinApi, Binary}),
-	gen_tcp:send(Socket, Packet);
-send_packet(Packet, Socket, {}) -> ok.
+	gen_tcp:send(Socket, Packet).
 
 %% guest_auth -- 1
 %% login_auth -- 2
