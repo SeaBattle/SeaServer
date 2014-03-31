@@ -83,7 +83,7 @@ init(Socket) -> %TODO протестировать ситуацию с подк�
 	{stop, Reason :: term(), NewState :: #client_state{}}).
 authorize({tcp, _, Packet}, State = #client_state{socket = Socket}) ->
 	%TODO try-catch?
-	{Type, ProtocolVersion, ApiVersion, Body} = ss_auth_packet:parse_packet(Packet),
+	{Type, ProtocolVersion, ApiVersion, Body} = ss_main_packet:parse_packet(Packet),
 	%% 	try
 %% 	    ss_auth_packet:parse_packet(Packet)
 %% 	catch

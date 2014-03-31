@@ -1,0 +1,3 @@
+message guest_auth {
+    required string uid = 1;
+}
