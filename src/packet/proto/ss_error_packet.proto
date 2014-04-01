@@ -1,4 +1,0 @@
-message error_packet {
-    required int32 code = 1;
-    required string descr = 2;
-}

@@ -1,0 +1,3 @@
+[submodule "src/packet/SeaPackets"]
+	path = src/packet/SeaPackets
+	url = git@github.com:comtihon/SeaPackets.git
