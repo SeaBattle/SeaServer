@@ -42,7 +42,7 @@
 %%--------------------------------------------------------------------
 -spec(start_link(_Socket) -> {ok, pid()} | ignore | {error, Reason :: term()}).
 start_link(Socket) ->
-	gen_fsm:start_link({local, ?SERVER}, ?MODULE, Socket, []).
+	gen_fsm:start_link(?MODULE, Socket, []).
 
 %%%===================================================================
 %%% gen_fsm callbacks
@@ -61,10 +61,9 @@ start_link(Socket) ->
 	{ok, StateName :: atom(), StateData :: #client_state{}} |
 	{ok, StateName :: atom(), StateData :: #client_state{}, timeout() | hibernate} |
 	{stop, Reason :: term()} | ignore).
-init(Socket) -> %TODO протестировать ситуацию с подключением и быстрым закрытием сокета. Будет ли при этом упущен tcp_closed?
+init(Socket) ->
 	% Поток ловит ошибки связанных процессов
 %% 	erlang:process_flag(trap_exit, true),
-	io:format("~w: has started (~w) with ~p~n", [?MODULE, self(), Socket]),
 	% Поток отправляет себе сообщение с указанием принять соединение
 	gen_fsm:send_all_state_event(self(), accept),
 	{ok, authorize, #client_state{socket = Socket}}.
@@ -141,10 +140,10 @@ authorize(Event, _From, State) ->
 	{next_state, NextStateName :: atom(), NewStateData :: #client_state{},
 		timeout() | hibernate} |
 	{stop, Reason :: term(), NewStateData :: #client_state{}}).
-handle_event(accept, StateName, #client_state{socket = ListenSocket}) ->  %TODO клиент подключается только 1 раз 0_о
+handle_event(accept, StateName, #client_state{socket = ListenSocket}) ->
 	% принимаем соединение. Если ok - приняли. Если ошибка, то будет exception
 	{ok, AcceptSocket} = gen_tcp:accept(ListenSocket),
-	io:format("~w new connection!~n", [?MODULE]),
+	io:format("~w new connection on ~w!~n", [?MODULE, AcceptSocket]),
 	% стартуем новый слушающий поток
 	ss_client_sup:start_socket(),
 	{next_state, StateName, #client_state{socket = AcceptSocket}};
