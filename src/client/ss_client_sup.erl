@@ -59,7 +59,7 @@ start_link() ->
 	{error, Reason :: term()}).
 init([]) ->
 	Port = seaserver_app:get_conf_param(port, 4232),
-	Opts = [{active, true}, {keepalive, true}, {packet, 0}, {reuseaddr, true}, binary],
+	Opts = [{active, true}, {keepalive, true}, {packet, 4}, {reuseaddr, true}, binary],
 	case gen_tcp:listen(Port, Opts) of
 		{ok, ListenSocket} ->
 			io:fwrite("~w:Listening on port ~p~n", [?MODULE, Port]),

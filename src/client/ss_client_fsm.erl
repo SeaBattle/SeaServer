@@ -120,7 +120,7 @@ authorize({tcp, _, Packet}, State = #client_state{socket = Socket}) ->
 	{stop, Reason :: normal | term(), NewState :: #client_state{}} |
 	{stop, Reason :: normal | term(), Reply :: term(),
 		NewState :: #client_state{}}).
-authorize(Event, _From, State) ->
+authorize(Event, _From, State) -> %TODO нужно ли это?
 	io:format("~w got sync ~w~n", [?MODULE, Event]),
 	Reply = ok,
 	{reply, Reply, state_name, State}.
