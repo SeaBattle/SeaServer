@@ -81,13 +81,7 @@ init(Socket) ->
 		timeout() | hibernate} |
 	{stop, Reason :: term(), NewState :: #client_state{}}).
 authorize({tcp, _, Packet}, State = #client_state{socket = Socket}) ->
-	%TODO try-catch?
 	{Type, ProtocolVersion, ApiVersion, Body} = ss_main_packet:parse_packet(Packet),
-	%% 	try
-%% 	    ss_auth_packet:parse_packet(Packet)
-%% 	catch
-%% 	    :  ->
-%% 	end
 	io:format("~w got packet ~w, PV[~w], AV[~w], Body[~p]~n", [?MODULE, Type, ProtocolVersion, ApiVersion, Body]),
 	case
 	ss_auth_man:make_auth(Type, Body) of
@@ -96,7 +90,7 @@ authorize({tcp, _, Packet}, State = #client_state{socket = Socket}) ->
 		Response ->
 			ss_main_packet:send_packet(error_packet, Socket, Response)
 	end,
-	{next_state, connected, State}.
+	{next_state, connected, State}. %TODO connected only on success
 
 %%--------------------------------------------------------------------
 %% @private
@@ -120,7 +114,7 @@ authorize({tcp, _, Packet}, State = #client_state{socket = Socket}) ->
 	{stop, Reason :: normal | term(), NewState :: #client_state{}} |
 	{stop, Reason :: normal | term(), Reply :: term(),
 		NewState :: #client_state{}}).
-authorize(Event, _From, State) -> %TODO нужно ли это?
+authorize(Event, _From, State) -> %TODO Не нужно.
 	io:format("~w got sync ~w~n", [?MODULE, Event]),
 	Reply = ok,
 	{reply, Reply, state_name, State}.
@@ -146,6 +140,8 @@ handle_event(accept, StateName, #client_state{socket = ListenSocket}) ->
 	io:format("~w new connection on ~w!~n", [?MODULE, AcceptSocket]),
 	% стартуем новый слушающий поток
 	ss_client_sup:start_socket(),
+	% старт таймера на отключение клиента
+	send_timeout_for_state(StateName),
 	{next_state, StateName, #client_state{socket = AcceptSocket}};
 handle_event(_Event, StateName, State) ->
 	io:format("~w: Unknown event (~w)~n", [?MODULE, _Event]),
@@ -189,15 +185,28 @@ handle_sync_event(_Event, _From, StateName, State) ->
 	{next_state, NextStateName :: atom(), NewStateData :: term(),
 		timeout() | hibernate} |
 	{stop, Reason :: normal | term(), NewStateData :: term()}).
+%обработка полученных tcp сообщений от клиента -> перенаправляем в соответствующее состояние
 handle_info(Info = {tcp, _, _}, StateName, State) -> ?MODULE:StateName(Info, State);
+%обработка закрытий tcp соединения -> отключаемся
 handle_info({tcp_closed, _}, _, State = #client_state{socket = Socket}) ->
 	io:format("~w Client ~w disconnected~n", [?MODULE, Socket]),
-	gen_tcp:close(Socket),  %TODO возможно здесь нужно не просто закрывать сокет, но уведомлять остальных об отключении клиента
+	%TODO возможно здесь нужно уведомлять остальных об отключении клиента
 	{stop, normal, State};
-handle_info({tcp_error, Socket, Message}, _, State) ->
-	gen_tcp:close(Socket),
+%обработка ошибок tcp соединения -> отключаемся
+handle_info({tcp_error, _, Message}, _, State) ->
+	%TODO возможно здесь нужно уведомлять остальных об отключении клиента
 	io:format("tcp_error: ~w~n", [Message]),
 	{stop, normal, State};
+%обработка таймаута для разных состояний -> либо отключаемся, либо обновляем таймаут
+handle_info({timeout, StartState}, StateName, State) ->
+	if
+		StartState == StateName ->
+			io:format("~w client disconnected by timeout~n", [?MODULE]),
+			{stop, normal, State};
+		true ->
+			send_timeout_for_state(StateName),
+			{next_state, StateName, State}
+	end;
 handle_info(_Info, StateName, State) ->
 	io:format("~w stateName ~w, state ~w unknown event: (~w)~n", [?MODULE, StateName, State, _Info]),
 	{next_state, StateName, State}.
@@ -214,11 +223,13 @@ handle_info(_Info, StateName, State) ->
 %%--------------------------------------------------------------------
 -spec(terminate(Reason :: normal | shutdown | {shutdown, term()}
 | term(), StateName :: atom(), StateData :: term()) -> term()).
-terminate(normal, _, _) ->
+terminate(normal, _, #client_state{socket = Socket}) ->
 	io:format("Normal terminate~n"),
+	gen_tcp:close(Socket),
 	ok;
-terminate(_Reason, _, #client_state{socket = _Sock}) ->
+terminate(_Reason, _, #client_state{socket = Socket}) ->
 	io:format("Error in ~p[~p]! terminate reason: ~p~n", [?MODULE, self(), _Reason]),
+	gen_tcp:close(Socket),
 	%TODO возможно здесь стоит закрыть сокет если он ещё не закрыт
 	%TODO скорее всего здесь также нужно уведомить других клиентов об ошибке и отключении этого клиента
 	ok.
@@ -239,3 +250,10 @@ code_change(_OldVsn, StateName, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+send_timeout_for_state(StateName) when StateName == authorize ->
+	erlang:send_after(500, self(), {timeout, StateName}); %пол-секунды на подключение
+send_timeout_for_state(StateName) when StateName == connected ->
+	erlang:send_after(3000, self(), {timeout, StateName}); %3 секунды на комнаты
+send_timeout_for_state(StateName) ->
+	io:format("~w warinng, unknown state: ~w~n", [?MODULE, StateName]),
+	erlang:send_after(1000, self(), {timeout, StateName}). %секунда на неизвестное состояние
