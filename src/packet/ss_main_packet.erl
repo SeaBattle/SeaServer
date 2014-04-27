@@ -21,23 +21,22 @@ parse_header(Binary) ->
 parse_packet(Binary) ->
 	{TypeInt, Protocol, Api, RawPacket} = parse_header(Binary),
 	{Type, Packet} = parse_body(TypeInt, RawPacket),
-	{Type, Protocol, Api, {Packet}}.
+	{Type, Protocol, Api, Packet}.
 
-% guest_auth_packet
-parse_body(1, Binary) ->
-	ss_guest_auth_pb:decode_guest_auth(Binary).
+%% guest_auth -- 1 (auth_packet)
+%% login_auth -- 2 (auth_packet)
+%% auth_resp -- 3
+%% error_packet -- 4
+
+% auth_packet
+parse_body(TypeInt, Binary) when TypeInt == 1; TypeInt == 2 ->
+	{Type, Uid, Password} = ss_auth_packet_pb:decode_auth_packet(Binary),
+	{Type, {Uid, Password}}.
 
 % error packet
-send_packet(Type, Socket, {Code, Message}) when Type == error_packet->
+send_packet(Type, Socket, {Code, Message}) when Type == error_packet ->
 	Protocol = seaserver_app:get_conf_param(protocol, 1),
 	MinApi = seaserver_app:get_conf_param(min_api, 1),
 	Binary = ss_error_packet_pb:encode_error_packet({Type, Code, Message}),
 	Packet = ss_packet_header_pb:encode_header({header, 4, Protocol, MinApi, Binary}),
 	gen_tcp:send(Socket, Packet).
-
-%% guest_auth -- 1
-%% login_auth -- 2
-%% auth_resp -- 3
-%% error_packet -- 4
-%%
-%%

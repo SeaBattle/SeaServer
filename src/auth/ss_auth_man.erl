@@ -12,7 +12,11 @@
 %% API
 -export([make_auth/2]).
 
-make_auth(guest_auth, {Uid}) ->
+% Password is undefined - GuestAuth
+make_auth(auth_packet, {Uid, undefined}) ->
 	ss_db_sup:get(db_pool, Uid, []),
 	{500, <<"Internal server error">>};
-make_auth(login_auth, {Login, Password}) -> ok.
+% Password presents - LoginAuth
+make_auth(auth_packet, {Login, Password}) ->
+	ss_db_sup:get(db_pool, Login, []),
+	{500, <<"Internal server error">>}.
