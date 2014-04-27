@@ -25,5 +25,6 @@ start_link() ->
 init([]) ->
 	io:format("~w: Super_sup has started (~w)~n", [?MODULE, self()]),
 	ListenerSup = ?CHILD(ss_client_sup, supervisor),
-	{ok, {{one_for_one, 5, 10}, [ListenerSup]}}.
+	DatabaseSup = ?CHILD(ss_db_sup, supervisor),
+	{ok, {{one_for_one, 5, 10}, [ListenerSup, DatabaseSup]}}.
 

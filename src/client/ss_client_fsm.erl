@@ -254,6 +254,6 @@ send_timeout_for_state(StateName) when StateName == authorize ->
 	erlang:send_after(500, self(), {timeout, StateName}); %пол-секунды на подключение
 send_timeout_for_state(StateName) when StateName == connected ->
 	erlang:send_after(3000, self(), {timeout, StateName}); %3 секунды на комнаты
-send_timeout_for_state(StateName) ->
+send_timeout_for_state(StateName) -> 
 	io:format("~w warinng, unknown state: ~w~n", [?MODULE, StateName]),
 	erlang:send_after(1000, self(), {timeout, StateName}). %секунда на неизвестное состояние

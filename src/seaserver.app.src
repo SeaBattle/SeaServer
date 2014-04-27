@@ -1,12 +1,25 @@
 {application, seaserver,
- [
-  {description, ""},
-  {vsn, "1"},
-  {registered, []},
-  {applications, [
-                  kernel,
-                  stdlib
-                 ]},
-  {mod, { seaserver_app, []}},
-  {env, [{port, 4232}, {protocol, 1}, {min_api, 1}]}
- ]}.
+	[
+		{description, ""},
+		{vsn, "1"},
+		{registered, []},
+		{applications, [
+			kernel,
+			stdlib
+		]},
+		{mod, {seaserver_app, []}},
+		{env, [
+			{port, 4232},
+			{protocol, 1},
+			{min_api, 1},
+			{db_pool, [
+				{size, 10},
+				{max_overflow, 10}
+			],
+				[
+					{host, "127.0.0.1"},
+					{port, 10017}
+				]
+			}
+		]}
+	]}.

@@ -12,5 +12,7 @@
 %% API
 -export([make_auth/2]).
 
-make_auth(guest_auth, {Uid}) -> {500, <<"Internal server error">>};
+make_auth(guest_auth, {Uid}) ->
+	ss_db_sup:get(db_pool, Uid, []),
+	{500, <<"Internal server error">>};
 make_auth(login_auth, {Login, Password}) -> ok.
