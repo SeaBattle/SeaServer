@@ -24,11 +24,22 @@ create_login(Login, Uid, Password) ->
 	ok.
 create_guest(Uid) ->
 	% создать игровую запись игрока и бд-объекты игрока, стены и кораблей
-	{Player, PlayerObj, WallObj, Ships} = create_player(Uid, "Guest"),
-
+	Player = create_player("Guest"),
+	io:format("Created player = ~p~n", [Player]),
 	% синхронно сохранить все корабли и получить сгенерированные ключи
-	Keys = [fun({_, Ship} = S) -> ss_db_sup:put(?DB_POOL, Ship) end || S <- Ships],
-	io:format("Saved ships, got keys: ~w~n", [Keys]),
+	F = fun(Ship) ->
+		ShipObj = riakc_obj:new(?SHIPS, undefined, Ship),
+		case ss_db_sup:put(?DB_POOL, ShipObj) of
+			{ok, Key} -> Key;
+			{error, _} -> []
+		end
+	end,
+	Keys = [F(S) || S <- Player#player.ships],
+	io:format("Saved ships, got keys: ~p~n", [Keys]),
+
+	% бд-объект не сохраняет стену и корабли, т.к. стена будет сохранена под тем же ключом в другой корзине,
+	% а корабли будут сохранены отдельно и слинкованы с этим объектом посредством вторичных индексов
+	PlayerObj = riakc_obj:new(?PLAYERS, Uid, Player#player{wall = undefined, ships = undefined}),
 
 	% слинковать вторичными индексами сохранённые корабли и бд-объект игрока
 	Meta = riakc_obj:get_update_metadata(PlayerObj),
@@ -36,30 +47,20 @@ create_guest(Uid) ->
 
 	% успешность создания пользователя игнорируется, т.к. гостю не важно, сохранили его или нет
 	ss_db_sup:put_async(?DB_POOL, riakc_obj:update_metadata(PlayerObj, LinkedMeta)),
+	WallObj = riakc_obj:new(?WALLS, Uid, Player#player.wall),
 	ss_db_sup:put_async(?DB_POOL, WallObj),
 	Player.
 
 % Создаёт запись игрока + стену и базовые корабли.
-create_player(Login, Name) ->
-	{Wall, WallObj} = create_wall(Login), % создать стену
-
-	ShipsTupls = [create_ship(Type) || Type <- [4, 3, 3, 2, 2, 2, 1, 1, 1, 1]], % создать базовый набор кораблей
-
-	Player = #player{name = Name, wall = Wall, ships = proplists:get_keys(ShipsTupls)},  % создать структуру игрока
-
-	io:format("Created player: ~w~n", [Player]),
-	% бд-объект не сохраняет стену и корабли, т.к. стена будет сохранена под тем же ключом в другой корзине,
-	% а корабли будут сохранены отдельно и слинкованы с этим объектом посредством вторичных индексов
-	{Player, riakc_obj:new(?PLAYERS, Login, Player#player{wall = undefined, ships = undefined}), WallObj, ShipsTupls}.
+create_player(Name) ->
+	Wall = create_wall(), % создать стену
+	Ships = [create_ship(Type) || Type <- [4, 3, 3, 2, 2, 2, 1, 1, 1, 1]], % создать базовый набор кораблей
+	#player{name = Name, wall = Wall, ships = Ships}.  % создать структуру игрока
 
 % Создаёт стену по-умолчанию.
-create_wall(Login) ->
-	Wall = #wall{},
-	io:format("Created wall: ~w~n", [Wall]),
-	{Wall, riakc_obj:new(?WALLS, Login, Wall)}.
+create_wall() ->
+	#wall{}.
 
 % Создаёт корабль заданого типа.
 create_ship(Type) ->
-	Ship = #ship{type = Type},
-	io:format("Created ship: ~w~n", [Ship]),
-	{Ship, riakc_obj:new(?SHIPS, undefined, Ship)}.
+	#ship{type = Type}.

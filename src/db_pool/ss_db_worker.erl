@@ -84,11 +84,17 @@ init(Args) ->
 	{stop, Reason :: term(), Reply :: term(), NewState :: #state{}} |
 	{stop, Reason :: term(), NewState :: #state{}}).
 handle_call({put, Object}, _From, #state{connection = Pid} = State) ->
-	Res = riakc_pb_socket:put(Pid, Object),
-	io:format("Result of putting object ~w~n", [Res]),
-	{reply, ok, State};
+	Res = case riakc_pb_socket:put(Pid, Object) of
+		      {ok, DBObject} ->
+			      {ok, riakc_obj:key(DBObject)};
+		      Error ->
+			      io:format("Error occured!~n~p~n", [Error]),
+			      {error, Error}
+	      end,
+	io:format("Result of putting object ~p~n", [Res]),
+	{reply, Res, State};
 handle_call({get, {Bucket, Key}}, _From, #state{connection = Pid} = State) ->
-	io:format("get object for key = ~w~n", [Key]),
+	io:format("get object for key = ~p~n", [Key]),
 	{reply, riakc_pb_socket:get(Pid, Bucket, Key), State};
 handle_call(_Request, _From, State) ->
 	{reply, ok, State}.

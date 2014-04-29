@@ -11,6 +11,7 @@
 
 -include("ss_packet_header_pb.hrl").
 -include("ss_guest_auth_pb.hrl").
+-include("ss_records.hrl").
 
 %% API
 -export([decode_packet/1, encode_packet/2]).
@@ -34,8 +35,8 @@ decode_body(TypeInt, Binary) when TypeInt == 1; TypeInt == 2 ->
 encode_packet(Type, {Code, Message}) when Type == error_packet ->
 	Binary = ss_error_packet_pb:encode_error_packet({Type, Code, Message}),
 	encode_header(Binary);
-encode_packet(Type, Player) when Type == player_packet ->
-	Binary = ss_player_packet_pb:encode_player_packet(Player),
+encode_packet(Type, #player{level = L, ban_type = BT, ban_end = BE, name = N, icon = I}) when Type == player_packet ->
+	Binary = ss_player_packet_pb:encode_player_packet({L, BT, BE, N, I}),
 	encode_header(Binary).
 
 encode_header(Binary) ->

@@ -84,9 +84,10 @@ authorize({tcp, _, Packet}, State = #client_state{socket = Socket}) ->
 	{Type, ProtocolVersion, ApiVersion, Body} = ss_main_packet:decode_packet(Packet),
 	io:format("~w got packet ~w, PV[~w], AV[~w], Body[~p]~n", [?MODULE, Type, ProtocolVersion, ApiVersion, Body]),
 	Response = case ss_auth_man:make_auth(Type, Body) of
-		           {ok, Body} -> %TODO здесь может возникнуть ошибка и её нужно будет поймать (или не нужно. Отключать игрока при ошибках сервера или перебрасывать на другой поток?)
-			           ss_main_packet:encode_packet(player_packet, Body);
+		           {ok, Player} -> %TODO здесь может возникнуть ошибка и её нужно будет поймать (или не нужно. Отключать игрока при ошибках сервера или перебрасывать на другой поток?)
+			           ss_main_packet:encode_packet(player_packet, Player);
 		           Error ->
+			           io:format("Got error = ~w~n", [Error]),
 			           ss_main_packet:encode_packet(error_packet, Error)
 	           end,
 	gen_tcp:send(Socket, Response),
