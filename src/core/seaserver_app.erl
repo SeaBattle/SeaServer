@@ -9,11 +9,10 @@
 %% Application callbacks
 %% ===================================================================
 
-start(_StartType, _StartArgs) ->
-    ss_super_sup:start_link().
+start(_StartType, _StartArgs) -> ss_super_sup:start_link().
 
 stop(_State) ->
-    ok.
+	ok.
 
 get_conf_param(Name, Default) ->
 	try

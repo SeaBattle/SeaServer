@@ -64,7 +64,8 @@ init(Args) ->
 	process_flag(trap_exit, true),
 	Host = proplists:get_value(host, Args),
 	Port = proplists:get_value(port, Args),
-	{ok, Pid} = riakc_pb_socket:start_link(Host, Port, {auto_reconnect, true}),
+	Options = proplists:get_value(options, Args),
+	{ok, Pid} = riakc_pb_socket:start_link(Host, Port, Options),
 	{ok, #state{connection = Pid}}.
 
 %%--------------------------------------------------------------------
@@ -82,12 +83,13 @@ init(Args) ->
 	{noreply, NewState :: #state{}, timeout() | hibernate} |
 	{stop, Reason :: term(), Reply :: term(), NewState :: #state{}} |
 	{stop, Reason :: term(), NewState :: #state{}}).
-handle_call({set, Object}, _From, #state{connection = Pid} = State) ->
-	io:format("set object = ~w~n", [Object]),
+handle_call({put, Object}, _From, #state{connection = Pid} = State) ->
+	Res = riakc_pb_socket:put(Pid, Object),
+	io:format("Result of putting object ~w~n", [Res]),
 	{reply, ok, State};
-handle_call({get, Key, Params}, _From, #state{connection = Pid} = State) ->
+handle_call({get, {Bucket, Key}}, _From, #state{connection = Pid} = State) ->
 	io:format("get object for key = ~w~n", [Key]),
-	{reply, [], State};
+	{reply, riakc_pb_socket:get(Pid, Bucket, Key), State};
 handle_call(_Request, _From, State) ->
 	{reply, ok, State}.
 
@@ -102,6 +104,9 @@ handle_call(_Request, _From, State) ->
 	{noreply, NewState :: #state{}} |
 	{noreply, NewState :: #state{}, timeout() | hibernate} |
 	{stop, Reason :: term(), NewState :: #state{}}).
+handle_cast({put, Object}, #state{connection = Pid} = State) ->
+	riakc_pb_socket:put(Pid, Object),
+	{noreply, State};
 handle_cast(_Request, State) ->
 	{noreply, State}.
 
@@ -136,7 +141,7 @@ handle_info(_Info, State) ->
 -spec(terminate(Reason :: (normal | shutdown | {shutdown, term()} | term()),
 		State :: #state{}) -> term()).
 terminate(_Reason, #state{connection = Pid}) ->
-
+	riakc_pb_socket:stop(Pid),
 	ok.
 
 %%--------------------------------------------------------------------

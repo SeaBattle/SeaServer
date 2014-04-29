@@ -12,7 +12,7 @@
 -behaviour(supervisor).
 
 %% API
--export([start_link/0, set/2, get/3]).
+-export([start_link/0, put/2, get/3, put_async/2]).
 
 %% Supervisor callbacks
 -export([init/1]).
@@ -56,23 +56,27 @@ start_link() ->
 	ignore |
 	{error, Reason :: term()}).
 init([]) ->
-	{ok, Pools} = seaserver_app:get_conf_param(db_pool, []),
+	Pools = seaserver_app:get_conf_param(pools, []),
 	PoolSpecs = lists:map(fun({Name, SizeArgs, WorkerArgs}) ->
 		PoolArgs = [{name, {local, Name}},
 			{worker_module, ss_db_worker}] ++ SizeArgs,
 		poolboy:child_spec(Name, PoolArgs, WorkerArgs)
 	end, Pools),
-	io:format("Creating pool: ~w~n", [PoolSpecs]),
 	{ok, {{one_for_one, 10, 10}, PoolSpecs}}.
 
-set(PoolName, Object) ->
+put(PoolName, Object) ->
 	poolboy:transaction(PoolName, fun(Worker) ->
-		gen_server:call(Worker, {set, Object})
+		gen_server:call(Worker, {put, Object})
 	end).
 
-get(PoolName, Key, Params) ->
+put_async(PoolName, Object) ->
 	poolboy:transaction(PoolName, fun(Worker) ->
-		gen_server:call(Worker, {get, Key, Params})
+		gen_server:cast(Worker, {put, Object})
+	end).
+
+get(PoolName, Bucket, Key) ->
+	poolboy:transaction(PoolName, fun(Worker) ->
+		gen_server:call(Worker, {get, {Bucket, Key}})
 	end).
 
 

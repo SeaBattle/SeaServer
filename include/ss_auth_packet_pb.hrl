@@ -6,3 +6,14 @@
 }).
 -endif.
 
+-ifndef(REGISTER_PACKET_PB_H).
+-define(REGISTER_PACKET_PB_H, true).
+-record(register_packet, {
+    login = erlang:error({required, login}),
+    password = erlang:error({required, password}),
+    name,
+    icon_url,
+    motto
+}).
+-endif.
+
