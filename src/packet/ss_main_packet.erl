@@ -13,30 +13,32 @@
 -include("ss_guest_auth_pb.hrl").
 
 %% API
--export([parse_header/1, parse_packet/1, send_packet/3]).
+-export([decode_packet/1, encode_packet/2]).
 
-parse_header(Binary) ->
-	{_, Type, Protocol, Api, Packet} = ss_packet_header_pb:decode_header(Binary),
-	{Type, Protocol, Api, Packet}.
-parse_packet(Binary) ->
-	{TypeInt, Protocol, Api, RawPacket} = parse_header(Binary),
-	{Type, Packet} = parse_body(TypeInt, RawPacket),
+decode_packet(Binary) ->
+	{_, TypeInt, Protocol, Api, RawPacket} = ss_packet_header_pb:decode_header(Binary),
+	{Type, Packet} = decode_body(TypeInt, RawPacket),
 	{Type, Protocol, Api, Packet}.
 
-%% guest_auth -- 1 (auth_packet)
-%% login_auth -- 2 (auth_packet)
-%% auth_resp -- 3
+%% guest_auth -- 1 (ss_auth_packet.proto)
+%% login_auth -- 2 (ss_auth_packet.proto)
+%% player_packet -- 3
 %% error_packet -- 4
+%% register_packet -- 5 (ss_auth_packet.proto)
 
 % auth_packet
-parse_body(TypeInt, Binary) when TypeInt == 1; TypeInt == 2 ->
+decode_body(TypeInt, Binary) when TypeInt == 1; TypeInt == 2 ->
 	{Type, Uid, Password} = ss_auth_packet_pb:decode_auth_packet(Binary),
 	{Type, {Uid, Password}}.
 
-% error packet
-send_packet(Type, Socket, {Code, Message}) when Type == error_packet ->
+encode_packet(Type, {Code, Message}) when Type == error_packet ->
+	Binary = ss_error_packet_pb:encode_error_packet({Type, Code, Message}),
+	encode_header(Binary);
+encode_packet(Type, Player) when Type == player_packet ->
+	Binary = ss_player_packet_pb:encode_player_packet(Player),
+	encode_header(Binary).
+
+encode_header(Binary) ->
 	Protocol = seaserver_app:get_conf_param(protocol, 1),
 	MinApi = seaserver_app:get_conf_param(min_api, 1),
-	Binary = ss_error_packet_pb:encode_error_packet({Type, Code, Message}),
-	Packet = ss_packet_header_pb:encode_header({header, 4, Protocol, MinApi, Binary}),
-	gen_tcp:send(Socket, Packet).
+	ss_packet_header_pb:encode_header({header, 4, Protocol, MinApi, Binary}).

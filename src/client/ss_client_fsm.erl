@@ -81,15 +81,15 @@ init(Socket) ->
 		timeout() | hibernate} |
 	{stop, Reason :: term(), NewState :: #client_state{}}).
 authorize({tcp, _, Packet}, State = #client_state{socket = Socket}) ->
-	{Type, ProtocolVersion, ApiVersion, Body} = ss_main_packet:parse_packet(Packet),
+	{Type, ProtocolVersion, ApiVersion, Body} = ss_main_packet:decode_packet(Packet),
 	io:format("~w got packet ~w, PV[~w], AV[~w], Body[~p]~n", [?MODULE, Type, ProtocolVersion, ApiVersion, Body]),
-	case
-	ss_auth_man:make_auth(Type, Body) of
-		ok ->
-			ss_main_packet:send_packet(auth_resp_packet, Socket, 1);
-		Response ->
-			ss_main_packet:send_packet(error_packet, Socket, Response)
-	end,
+	Response = case ss_auth_man:make_auth(Type, Body) of
+		           {ok, Body} -> %TODO здесь может возникнуть ошибка и её нужно будет поймать (или не нужно. Отключать игрока при ошибках сервера или перебрасывать на другой поток?)
+			           ss_main_packet:encode_packet(player_packet, Body);
+		           Error ->
+			           ss_main_packet:encode_packet(error_packet, Error)
+	           end,
+	gen_tcp:send(Socket, Response),
 	{next_state, connected, State}. %TODO connected only on success
 
 %%--------------------------------------------------------------------
@@ -254,6 +254,6 @@ send_timeout_for_state(StateName) when StateName == authorize ->
 	erlang:send_after(500, self(), {timeout, StateName}); %пол-секунды на подключение
 send_timeout_for_state(StateName) when StateName == connected ->
 	erlang:send_after(3000, self(), {timeout, StateName}); %3 секунды на комнаты
-send_timeout_for_state(StateName) -> 
+send_timeout_for_state(StateName) ->
 	io:format("~w warinng, unknown state: ~w~n", [?MODULE, StateName]),
 	erlang:send_after(1000, self(), {timeout, StateName}). %секунда на неизвестное состояние
