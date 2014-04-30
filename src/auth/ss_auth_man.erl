@@ -15,8 +15,7 @@
 %% API
 -export([make_auth/2]).
 
-% Password is undefined - GuestAuth
-make_auth(auth_packet, {Uid, undefined}) ->
+make_auth(guest_auth, {Uid, _}) ->
 	UidBin = if is_binary(Uid) -> Uid;
 		         true -> list_to_binary(Uid)
 	         end,
@@ -31,8 +30,7 @@ make_auth(auth_packet, {Uid, undefined}) ->
 			io:format("~w, error occured, can't read value from db:~p~n", [?MODULE, Other]),
 			{500, <<"Server error!">>}
 	end;
-% Password presents - LoginAuth
-make_auth(auth_packet, {Login, Password}) ->
+make_auth(login_auth, {Login, Password}) ->
 	LoginBin = if is_binary(Login) -> Login;
 		           true -> list_to_binary(Login)
 	           end,

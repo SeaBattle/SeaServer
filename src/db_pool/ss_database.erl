@@ -55,11 +55,12 @@ create_guest(Uid) ->
 create_player(Name) ->
 	Wall = create_wall(), % создать стену
 	Ships = [create_ship(Type) || Type <- [4, 3, 3, 2, 2, 2, 1, 1, 1, 1]], % создать базовый набор кораблей
-	#player{name = Name, wall = Wall, ships = Ships}.  % создать структуру игрока
+	#player{name = Name, wall = Wall, ships = Ships, icon = "default"}.  % создать структуру игрока %TODO сделать стандартную иконку на случай, если игрок не задал свою
 
 % Создаёт стену по-умолчанию.
 create_wall() ->
-	#wall{}.
+	{_, _, Timestamp} = os:timestamp(),
+	#wall{created = Timestamp}.
 
 % Создаёт корабль заданого типа.
 create_ship(Type) ->
