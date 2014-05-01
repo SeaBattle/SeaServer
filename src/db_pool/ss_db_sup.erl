@@ -12,7 +12,7 @@
 -behaviour(supervisor).
 
 %% API
--export([start_link/0, put/2, get/3, put_async/2]).
+-export([start_link/0, put/2, get/3, put_async/2, put/3]).
 
 %% Supervisor callbacks
 -export([init/1]).
@@ -67,6 +67,10 @@ init([]) ->
 put(PoolName, Object) ->
 	poolboy:transaction(PoolName, fun(Worker) ->
 		gen_server:call(Worker, {put, Object})
+	end).
+put(PoolName, Object, Params) ->
+	poolboy:transaction(PoolName, fun(Worker) ->
+		gen_server:cast(Worker, {put, Object, Params})
 	end).
 
 put_async(PoolName, Object) ->

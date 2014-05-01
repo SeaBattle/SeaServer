@@ -11,6 +11,7 @@
 -record(register_packet, {
     login = erlang:error({required, login}),
     password = erlang:error({required, password}),
+    uid = erlang:error({required, uid}),
     name,
     icon_url,
     motto

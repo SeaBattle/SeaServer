@@ -14,7 +14,12 @@
 -include("ss_records.hrl").
 
 %% API
--export([decode_packet/1, encode_packet/2]).
+-export([decode_packet/1, encode_packet/2, send_error/3, send_error/2]).
+
+send_error(Socket, {Code, Message}) -> send_error(Socket, Code, Message).
+send_error(Socket, Code, Message) ->
+	Packet = encode_packet(error_packet, {Code, Message}),
+	gen_tcp:send(Socket, Packet).
 
 decode_packet(Binary) ->
 	{_, Type, Protocol, Api, RawPacket} = ss_packet_header_pb:decode_header(Binary),
@@ -24,7 +29,10 @@ decode_packet(Binary) ->
 % auth_packet
 decode_body(Type, Binary) when Type == guest_auth; Type == login_auth ->
 	{_, Uid, Password} = ss_auth_packet_pb:decode_auth_packet(Binary),
-	{Uid, Password}.
+	{Uid, Password};
+decode_body(Type, Binary) when Type == register_packet ->
+	{_, Login, Password, Uid, Name, Icon, Motto} = ss_auth_packet_pb:decode_register_packet(Binary),
+	{{Login, Password, Uid}, {Name, Icon, Motto}}.
 
 encode_packet(Type, {Code, Message}) when Type == error_packet ->
 	Binary = ss_error_packet_pb:encode_error_packet({Type, Code, Message}),

@@ -93,6 +93,8 @@ handle_call({put, Object}, _From, #state{connection = Pid} = State) ->
 	      end,
 	io:format("Result of putting object ~p~n", [Res]),
 	{reply, Res, State};
+handle_call({put, Object, Params}, _From, #state{connection = Pid} = State) ->
+	{reply, riakc_pb_socket:put(Pid, Object, Params), State};
 handle_call({get, {Bucket, Key}}, _From, #state{connection = Pid} = State) ->
 	io:format("get object for key = ~p~n", [Key]),
 	{reply, riakc_pb_socket:get(Pid, Bucket, Key), State};

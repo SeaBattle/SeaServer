@@ -18,8 +18,7 @@
 
 %% gen_fsm callbacks
 -export([init/1,
-	authorize/2,
-	authorize/3,
+	authorization/2,
 	handle_event/3,
 	handle_sync_event/4,
 	handle_info/3,
@@ -66,59 +65,30 @@ init(Socket) ->
 %% 	erlang:process_flag(trap_exit, true),
 	% Поток отправляет себе сообщение с указанием принять соединение
 	gen_fsm:send_all_state_event(self(), accept),
-	{ok, authorize, #client_state{socket = Socket}}.
+	{ok, authorization, #client_state{socket = Socket}}.
 
 %%--------------------------------------------------------------------
 %% @private
 %% @doc
-%% Авторизовывает пользователя
+%% Гостевая авторизация, авторизация по логину-паролю, регистрация.
+%% Регистрация - это тоже авторизация, т.к. после неё пользователь считается выполнившим вход
+%% под только что созданными данными.
 %%
 %% @end
 %%--------------------------------------------------------------------
--spec(authorize(_Event, _State) ->
+-spec(authorization(_Event, _State) ->
 	{next_state, NextStateName :: atom(), NextState :: #client_state{}} |
 	{next_state, NextStateName :: atom(), NextState :: #client_state{},
 		timeout() | hibernate} |
 	{stop, Reason :: term(), NewState :: #client_state{}}).
-authorize({tcp, _, Packet}, State = #client_state{socket = Socket}) ->
-	{Type, ProtocolVersion, ApiVersion, Body} = ss_main_packet:decode_packet(Packet),
-	io:format("~w got packet ~w, PV[~w], AV[~w], Body[~p]~n", [?MODULE, Type, ProtocolVersion, ApiVersion, Body]),
-	Response = case ss_auth_man:make_auth(Type, Body) of
-		           {ok, Player} -> %TODO здесь может возникнуть ошибка и её нужно будет поймать (или не нужно. Отключать игрока при ошибках сервера или перебрасывать на другой поток?)
-			           ss_main_packet:encode_packet(player_packet, Player);
-		           Error ->
-			           io:format("Got error = ~w~n", [Error]),
-			           ss_main_packet:encode_packet(error_packet, Error)
-	           end,
-	gen_tcp:send(Socket, Response),
-	{next_state, connected, State}. %TODO connected only on success
-
-%%--------------------------------------------------------------------
-%% @private
-%% @doc
-%% There should be one instance of this function for each possible
-%% state name. Whenever a gen_fsm receives an event sent using
-%% gen_fsm:sync_send_event/[2,3], the instance of this function with
-%% the same name as the current state name StateName is called to
-%% handle the event.
-%%
-%% @end
-%%--------------------------------------------------------------------
--spec(authorize(Event :: term(), From :: {pid(), term()},
-		State :: #client_state{}) ->
-	{next_state, NextStateName :: atom(), NextState :: #client_state{}} |
-	{next_state, NextStateName :: atom(), NextState :: #client_state{},
-		timeout() | hibernate} |
-	{reply, Reply, NextStateName :: atom(), NextState :: #client_state{}} |
-	{reply, Reply, NextStateName :: atom(), NextState :: #client_state{},
-		timeout() | hibernate} |
-	{stop, Reason :: normal | term(), NewState :: #client_state{}} |
-	{stop, Reason :: normal | term(), Reply :: term(),
-		NewState :: #client_state{}}).
-authorize(Event, _From, State) -> %TODO Не нужно.
-	io:format("~w got sync ~w~n", [?MODULE, Event]),
-	Reply = ok,
-	{reply, Reply, state_name, State}.
+authorization({tcp, _, Packet}, State = #client_state{socket = Socket}) ->
+	{Type, _ProtocolVersion, ApiVersion, Body} = ss_main_packet:decode_packet(Packet),
+	io:format("~w got packet ~w, PV[~w], AV[~w], Body[~p]~n", [?MODULE, Type, _ProtocolVersion, ApiVersion, Body]),
+	ok = ss_client_processor:process_header(Socket, ApiVersion),
+	case ss_client_processor:process_packet(Socket, Type, Body) of
+		{ok, Player} -> {next_state, in_room, State#client_state{player = Player}};
+		_ -> {next_state, authorization, State}
+	end.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -168,6 +138,7 @@ handle_event(_Event, StateName, State) ->
 	{stop, Reason :: term(), Reply :: term(), NewStateData :: term()} |
 	{stop, Reason :: term(), NewStateData :: term()}).
 handle_sync_event(_Event, _From, StateName, State) ->
+	io:format("~w: Unknown sync event (~w)~n", [?MODULE, _Event]),
 	Reply = ok,
 	{reply, Reply, StateName, State}.
 
@@ -199,10 +170,11 @@ handle_info({tcp_error, _, Message}, _, State) ->
 	io:format("tcp_error: ~w~n", [Message]),
 	{stop, normal, State};
 %обработка таймаута для разных состояний -> либо отключаемся, либо обновляем таймаут
-handle_info({timeout, StartState}, StateName, State) ->
+handle_info({timeout, StartState}, StateName, State = #client_state{socket = Socket}) ->
 	if
 		StartState == StateName ->
 			io:format("~w client disconnected by timeout~n", [?MODULE]),
+			ss_main_packet:send_error(Socket, 408, <<"You were disconnected by timeout!">>),
 			{stop, normal, State};
 		true ->
 			send_timeout_for_state(StateName),
@@ -251,10 +223,10 @@ code_change(_OldVsn, StateName, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
-send_timeout_for_state(StateName) when StateName == authorize ->
+send_timeout_for_state(StateName) when StateName == authorization ->
 	erlang:send_after(500, self(), {timeout, StateName}); %пол-секунды на подключение
-send_timeout_for_state(StateName) when StateName == connected ->
+send_timeout_for_state(StateName) when StateName == in_room ->
 	erlang:send_after(3000, self(), {timeout, StateName}); %3 секунды на комнаты
 send_timeout_for_state(StateName) ->
-	io:format("~w warinng, unknown state: ~w~n", [?MODULE, StateName]),
+	io:format("~w warning, unknown state: ~w~n", [?MODULE, StateName]),
 	erlang:send_after(1000, self(), {timeout, StateName}). %секунда на неизвестное состояние
