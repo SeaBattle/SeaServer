@@ -9,6 +9,8 @@
 -module(ss_main_packet).
 -author("tihon").
 
+-include("ss_auth_packet_pb.hrl").
+-include("ss_error_packet_pb.hrl").
 -include("ss_packet_header_pb.hrl").
 -include("ss_guest_auth_pb.hrl").
 -include("ss_records.hrl").
@@ -22,17 +24,18 @@ send_error(Socket, Code, Message) ->
 	gen_tcp:send(Socket, Packet).
 
 decode_packet(Binary) ->
-	{_, Type, Protocol, Api, RawPacket} = ss_packet_header_pb:decode_header(Binary),
-	Packet = decode_body(Type, RawPacket),
-	{Type, Protocol, Api, Packet}.
+	Header = ss_packet_header_pb:decode_header(Binary),
+	Packet = decode_body(Header#header.type, Header#header.packet),
+	{Header#header.type, Header#header.protocol, Header#header.apiversion, Packet}.
 
 % auth_packet
 decode_body(Type, Binary) when Type == guest_auth; Type == login_auth ->
-	{_, Uid, Password} = ss_auth_packet_pb:decode_auth_packet(Binary),
-	{Uid, Password};
+	Auth = ss_auth_packet_pb:decode_auth_packet(Binary),
+	{Auth#auth_packet.uid, Auth#auth_packet.password};
 decode_body(Type, Binary) when Type == register_packet ->
-	{_, Login, Password, Uid, Name, Icon, Motto} = ss_auth_packet_pb:decode_register_packet(Binary),
-	{{Login, Password, Uid}, {Name, Icon, Motto}}.
+	Register = ss_auth_packet_pb:decode_register_packet(Binary),
+	{{Register#register_packet.login, Register#register_packet.password, Register#register_packet.uid},
+		{Register#register_packet.name, Register#register_packet.icon_url, Register#register_packet.motto}}.
 
 encode_packet(Type, {Code, Message}) when Type == error_packet ->
 	Binary = ss_error_packet_pb:encode_error_packet({Type, Code, Message}),
