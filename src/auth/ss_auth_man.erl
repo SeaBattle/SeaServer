@@ -77,10 +77,9 @@ register({{Login, Password, Uid}, {Name, Motto, Icon}}) ->
 create_guest(Uid) ->
 	Player = ss_database:create_player("Guest"),
 	ShipKeys = ss_database:save_ships(Player#player.ships), % синхронно сохранить все корабли и получить сгенерированные ключи
-	% TODO убрать пустые ключи, стоит ли заморачиваться?
 	% асинхронно сохранить структуру игрока
 	% успешность создания пользователя игнорируется, т.к. гостю не важно, сохранили его или нет
-	ss_db_sup:put_async(?DB_POOL, ss_database:compile_player(Player, ShipKeys, Uid)), % TODO сохранится ли игрок, если в ключах кораблей будет []?
+	ss_db_sup:put_async(?DB_POOL, ss_database:compile_player(Player, ShipKeys, Uid)),
 	WallObj = riakc_obj:new(?WALLS, Uid, Player#player.wall),
 	ss_db_sup:put_async(?DB_POOL, WallObj),
 	Player.

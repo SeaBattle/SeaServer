@@ -29,7 +29,7 @@ create_login(Login, Password, Uid) ->
 			end;
 		{error, notfound} -> % запись не найдена - создаём новую
 			LoginObj = riakc_obj:new(?LOGINS, Login, {Password}),  %TODO put with return_body ss_db_sup:put(?DB_POOL, NewObj, [return_body])
-			case ss_db_sup:put(?DB_POOL, LoginObj) of
+			case ss_db_sup:put(?DB_POOL, LoginObj) of %TODO избавиться от case?
 				{ok, _} -> created;
 				{error, _} ->
 					io:format("~w can't save ~w to Logins!~n", [?MODULE, Login]),
@@ -103,14 +103,13 @@ create_ship(Type) ->
 
 % Синхронно сохраняет корабли в БД, возвращает ключи, по которым были сохранены корабли
 save_ships(Ships) ->
-	F = fun(Ship) ->
+	lists:foldl(fun(Ship, Keys) ->
 		ShipObj = riakc_obj:new(?SHIPS, undefined, Ship),
 		case ss_db_sup:put(?DB_POOL, ShipObj) of
-			{ok, Key} -> Key;
-			{error, _} -> []
+			{ok, Key} -> [Key | Keys];
+			{error, _} -> Keys
 		end
-	end,
-	[F(S) || S <- Ships].
+	end, [], Ships).
 
 % Компилирует игрока в riak-объек, прикрепляет индексы кораблей вторичными индексами в его метаданные
 compile_player(Player, Ships, Key) ->
