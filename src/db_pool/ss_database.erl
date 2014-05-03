@@ -9,32 +9,27 @@
 -module(ss_database).
 -author("tihon").
 
+-define(SHIPPACK, [4, 3, 3, 2, 2, 2, 1, 1, 1, 1]).
+-define(DEF_ICON, "default").
+
 -include("ss_records.hrl").
 -include("ss_database.hrl").
 
 %% API
--export([create_login/3, create_player/3, save_ships/1, compile_player/3, create_player/1, update_player/3, update_wall/2, get_player/1, get_wall/1]).
+-export([create_login/3, create_player/3, save_ships/1, compile_player/3, create_player/1, update_player/4, update_wall/2, get_player/1, get_wall/1]).
 
 % TODO get на стену и корабли
 % создаёт запись в корзине Логины. Ищет и использует предшествующую гостевую запись, если была.
-create_login(Login, Password, Uid) ->
+create_login(Login, Password, Uid) -> % TODO процесс семафор для блокировки одноврененного создания одного и тогоже логина с разных потоков
 	case ss_db_sup:get(?DB_POOL, ?PLAYERS, Uid) of
-		{ok, _} -> % гостевая запись найдена - новую не создаём - используем текущую
+		{ok, PlayerObj} -> % гостевая запись найдена - новую не создаём - используем текущую
 			LoginObj = riakc_obj:new(?LOGINS, Login, {Password, Uid}),  %TODO put with return_body
-			case ss_db_sup:put(?DB_POOL, LoginObj) of
-				{ok, _} -> used;
-				{error, _} ->
-					io:format("~w can't save ~w to Logins!~n", [?MODULE, Login]),
-					error
-			end;
+			{ok, _} = ss_db_sup:put(?DB_POOL, LoginObj),
+			{used, PlayerObj};
 		{error, notfound} -> % запись не найдена - создаём новую
-			LoginObj = riakc_obj:new(?LOGINS, Login, {Password}),  %TODO put with return_body ss_db_sup:put(?DB_POOL, NewObj, [return_body])
-			case ss_db_sup:put(?DB_POOL, LoginObj) of %TODO избавиться от case?
-				{ok, _} -> created;
-				{error, _} ->
-					io:format("~w can't save ~w to Logins!~n", [?MODULE, Login]),
-					error
-			end
+			LoginObj = riakc_obj:new(?LOGINS, Login, Password),  %TODO put with return_body ss_db_sup:put(?DB_POOL, NewObj, [return_body])
+			{ok, _} = ss_db_sup:put(?DB_POOL, LoginObj),
+			created
 	end.
 
 % Возвращает структуру игрока. Игрок точно должен быть в базе.
@@ -48,34 +43,26 @@ get_wall(Key) ->
 
 % Создаёт запись игрока + стену и базовые корабли.
 create_player(Name) ->
-	Wall = create_wall(), % создать стену
-	Ships = [create_ship(Type) || Type <- [4, 3, 3, 2, 2, 2, 1, 1, 1, 1]], % создать базовый набор кораблей
-	#player{name = Name, wall = Wall, ships = Ships, icon = "default"}.  % создать структуру игрока %TODO сделать стандартную иконку на случай, если игрок не задал свою
+	create_player(Name, undefined, ?DEF_ICON). %TODO сделать стандартную иконку на случай, если игрок не задал свою
 create_player(Name, Motto, Icon) ->
 	Wall = create_wall(), % создать стену
-	Ships = [create_ship(Type) || Type <- [4, 3, 3, 2, 2, 2, 1, 1, 1, 1]], % создать базовый набор кораблей
+	Ships = [create_ship(Type) || Type <- ?SHIPPACK], % создать базовый набор кораблей
 	#player{name = Name, wall = Wall#wall{motto = Motto}, ships = Ships, icon = Icon}.
 
 % Обновляет запись игрока, устанавливает новое имя.
-update_player(Key, [], []) -> {ok, get_player(Key)};  % обновлять не нужно, просто вернуть
-update_player(Key, Name, Icon) ->
-	{ok, Object} = ss_db_sup:get(?DB_POOL, ?PLAYERS, Key),
-	Player = binary_to_term(riakc_obj:get_value(Object)),
-	if
-		Player#player.name == Name andalso Player#player.icon == Icon ->
-			{ok, Player}; % данные совпадают - обновлять не нужно
-		true ->
-			UpIcon = if Icon == [] -> Player#player.icon; % если иконка пустая - оставляем иконку по-умолчанию
-				         true -> Icon
-			         end,
-			UpName = if Name == [] -> Player#player.name; % если имя пустое - оставляем имя по-умолчанию
-				         true -> Name
-			         end,
-			UpdatedPlayer = Player#player{name = UpName, icon = UpIcon}, % установить новые данные и сохранить объект
-			NewObj = riakc_obj:update_value(Object, UpdatedPlayer),
-			{ok, _} = ss_db_sup:put(?DB_POOL, NewObj),
-			{ok, Player}
-	end.
+update_player(Player, _Object, [], []) ->  % обновлять не нужно, просто вернуть
+	Player;
+update_player(#player{name = Name, icon = Icon} = Player, _Object, Name, Icon) ->  % данные совпадают - обновлять не нужно
+	Player;
+update_player(Player, Object, [], Icon) -> % имя пустое - ставим имя по-умолчанию
+	update_player(Player, Object, "Guest", Icon);
+update_player(Player, Object, Name, []) -> % иконка пустая - оставляем иконку по-умолчанию
+	update_player(Player, Object, Name, ?DEF_ICON);
+update_player(Player, Object, Name, Icon) ->
+	UpdatedPlayer = Player#player{name = Name, icon = Icon}, % установить новые данные и сохранить объект
+	NewObj = riakc_obj:update_value(Object, UpdatedPlayer),
+	{ok, _} = ss_db_sup:put(?DB_POOL, NewObj),
+	UpdatedPlayer.
 
 % Создаёт стену по-умолчанию.
 create_wall() ->
@@ -83,19 +70,18 @@ create_wall() ->
 	#wall{created = Timestamp}.
 
 % Обновляет стену
-update_wall(Key, []) -> {ok, get_wall(Key)};  % обновлять не нужно, просто вернуть
+update_wall(Key, []) -> get_wall(Key);  % обновлять не нужно, просто вернуть
 update_wall(Key, Motto) ->
 	{ok, Object} = ss_db_sup:get(?DB_POOL, ?WALLS, Key),
 	Wall = binary_to_term(riakc_obj:get_value(Object)),
-	if
-		Wall#wall.motto == Motto -> {ok, Wall};
-		true ->
+	case Wall#wall.motto of
+		Motto -> {ok, Wall};  % девиз не поменялся.
+		_ ->
 			UpdatedWall = Wall#wall{motto = Motto}, % установить новые данные и сохранить объект
 			NewObj = riakc_obj:update_value(Object, UpdatedWall),
 			{ok, _} = ss_db_sup:put(?DB_POOL, NewObj),
-			{ok, Wall}
-	end
-.
+			UpdatedWall
+	end.
 
 % Создаёт корабль заданого типа.
 create_ship(Type) ->

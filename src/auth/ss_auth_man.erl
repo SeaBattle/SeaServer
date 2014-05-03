@@ -65,10 +65,8 @@ register({{Login, Password, Uid}, {Name, Motto, Icon}}) ->
 			case ss_database:create_login(LoginBin, Password, UidBin) of
 				created -> % запись была создана с нуля - нужно создать игрока и стену
 					create_client(LoginBin, Name, Motto, Icon);
-				used -> % была использована гостевая запись - нужно обновить запись
-					update_client(UidBin, Name, Motto, Icon);
-				error ->  % произошла ошибка - запись не была создана
-					{error, {500, <<"Server error.">>}}
+				{used, PlayerObj} -> % была использована гостевая запись - нужно обновить запись
+					update_client(PlayerObj, UidBin, Name, Motto, Icon)
 			end;
 		_ -> {error, {500, <<"Server error.">>}}
 	end.
@@ -94,7 +92,8 @@ create_client(Key, Name, Motto, Icon) ->
 	Player.
 
 % Обновляет запись игрока. Устанавливает новые имя, девиз и иконку
-update_client(Key, Name, Motto, Icon) ->
-	{ok, Player} = ss_database:update_player(Key, Name, Icon),  % TODO здесь может быть exception при работе с БД. Где отлавливать?
-	{ok, Wall} = ss_database:update_wall(Key, Motto),
+update_client(OldPlayerObj, Key, Name, Motto, Icon) ->
+	OldPlayer = binary_to_term(riakc_obj:get_value(OldPlayerObj)),
+	Player = ss_database:update_player(OldPlayer, OldPlayerObj, Name, Icon),  % TODO здесь может быть exception при работе с БД. Где отлавливать?
+	Wall = ss_database:update_wall(Key, Motto),
 	Player#player{wall = Wall}.

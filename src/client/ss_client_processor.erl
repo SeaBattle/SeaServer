@@ -35,5 +35,7 @@ process_packet(Socket, Type, Body) when Type == guest_auth; Type == login_auth -
 	end;
 process_packet(Socket, Type, Body) when Type == register_packet ->
 	io:format("Register packet: ~p~n", [Body]),
-	ss_auth_man:register(Body),
-	ok.
+	case ss_auth_man:register(Body) of
+		{error, Packet} -> ss_main_packet:send_error(Socket, Packet);
+		Player -> {ok, Player}
+	end.
