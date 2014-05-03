@@ -85,9 +85,10 @@ authorization({tcp, _, Packet}, State = #client_state{socket = Socket}) ->
 	{Type, _ProtocolVersion, ApiVersion, Body} = ss_main_packet:decode_packet(Packet),
 	io:format("~w got packet ~w, PV[~w], AV[~w], Body[~p]~n", [?MODULE, Type, _ProtocolVersion, ApiVersion, Body]),
 	ok = ss_client_processor:process_header(Socket, ApiVersion),
-	case ss_client_processor:process_packet(Socket, Type, Body) of
-		{ok, Player} -> {next_state, in_room, State#client_state{player = Player}};
-		_ -> {next_state, authorization, State}
+	case ss_client_processor:process_packet(Socket, Type, Body) of  % TODO - отправка ответа
+		{ok, Player} ->
+			{next_state, in_room, State#client_state{player = Player}}; % TODO next state after authorization - connected
+		_Error -> {next_state, authorization, State}
 	end.
 
 %%--------------------------------------------------------------------

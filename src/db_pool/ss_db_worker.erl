@@ -84,20 +84,11 @@ init(Args) ->
 	{stop, Reason :: term(), Reply :: term(), NewState :: #state{}} |
 	{stop, Reason :: term(), NewState :: #state{}}).
 handle_call({put, Object}, _From, #state{connection = Pid} = State) ->
-	Res = case riakc_pb_socket:put(Pid, Object) of
-		      {ok, DBObject} ->
-			      {ok, riakc_obj:key(DBObject)};
-		      Error ->
-			      io:format("Error occured!~n~p~n", [Error]),
-			      {error, Error}
-	      end,
-	io:format("Result of putting object ~p~n", [Res]),
-	{reply, Res, State};
+	{reply, save(Pid, Object), State};
 handle_call({put, Object, Params}, _From, #state{connection = Pid} = State) ->
-	{reply, riakc_pb_socket:put(Pid, Object, Params), State};
+	{reply, save(Pid, Object, Params), State};
 handle_call({get, {Bucket, Key}}, _From, #state{connection = Pid} = State) ->
-	io:format("get object for key = ~p~n", [Key]),
-	{reply, riakc_pb_socket:get(Pid, Bucket, Key), State};
+	{reply, load(Pid, Bucket, Key), State};
 handle_call(_Request, _From, State) ->
 	{reply, ok, State}.
 
@@ -113,9 +104,10 @@ handle_call(_Request, _From, State) ->
 	{noreply, NewState :: #state{}, timeout() | hibernate} |
 	{stop, Reason :: term(), NewState :: #state{}}).
 handle_cast({put, Object}, #state{connection = Pid} = State) ->
-	riakc_pb_socket:put(Pid, Object),
+	put(Pid, Object),
 	{noreply, State};
 handle_cast(_Request, State) ->
+	io:format("~w unknown cast ~w!~n", [?MODULE, _Request]),
 	{noreply, State}.
 
 %%--------------------------------------------------------------------
@@ -169,3 +161,16 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+save(Pid, Object) -> save(Pid, Object, []).
+save(Pid, Object, [get_keys]) ->
+	case save(Pid, Object, [return_body]) of  %TODO при ошибке ронять и перезапускать поток.
+		{ok, DBObject} ->
+			{ok, riakc_obj:key(DBObject)};
+		Error ->
+			io:format("Error occured!~n~p~n", [Error]),
+			{error, Error}
+	end;
+save(Pid, Object, Params) ->
+	riakc_pb_socket:put(Pid, Object, Params).
+load(Pid, Bucket, Key) ->
+	riakc_pb_socket:get(Pid, Bucket, Key).

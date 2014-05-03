@@ -22,13 +22,12 @@ make_auth(guest_auth, {Uid, _}) ->
 	case ss_db_sup:get(?DB_POOL, ?PLAYERS, UidBin) of
 		{ok, Object} -> % запись найдена - вернуть
 			%% % TODO проверка на бан
-			Player = binary_to_term(riakc_obj:get_value(Object)),
-			{ok, Player};
+			binary_to_term(riakc_obj:get_value(Object));
 		{error, notfound} -> % запись не найдена - создать
 			{ok, create_guest(UidBin)};
 		{error, Other} ->
 			io:format("~w, error occured, can't read value from db:~p~n", [?MODULE, Other]),
-			{500, <<"Server error!">>}
+			{error, {500, <<"Server error!">>}}
 	end;
 make_auth(login_auth, {Login, Password}) ->
 	LoginBin = if is_binary(Login) -> Login;
@@ -42,13 +41,13 @@ make_auth(login_auth, {Login, Password}) ->
 					% TODO проверка на бан
 					% TODO загрузка записи игрока через login или uid
 					ok;
-				true -> {403, <<"Bad password!">>}
+				true -> {error, {403, <<"Bad password!">>}}
 			end;
 		{error, notfound} -> % запись не найдена - ошибка
-			{404, <<"User not found!">>};
+			{error, {404, <<"User not found!">>}};
 		Error ->
 			io:format("~w, error occured, can't read value from db: ~p~n", [?MODULE, Error]),
-			{500, <<"Server error!">>}
+			{error, {500, <<"Server error!">>}}
 	end.
 
 register({{Login, Password, Uid}, {Name, Motto, Icon}}) ->
@@ -86,9 +85,9 @@ create_guest(Uid) ->
 create_client(Key, Name, Motto, Icon) ->
 	Player = ss_database:create_player(Name, Motto, Icon),
 	ShipKeys = ss_database:save_ships(Player#player.ships), % синхронно сохранить все корабли и получить сгенерированные ключи
-	{ok, _} = ss_db_sup:put(?DB_POOL, ss_database:compile_player(Player, ShipKeys, Key)),
+	ok = ss_db_sup:put(?DB_POOL, ss_database:compile_player(Player, ShipKeys, Key)),
 	WallObj = riakc_obj:new(?WALLS, Key, Player#player.wall),
-	{ok, _} = ss_db_sup:put(?DB_POOL, WallObj),
+	ok = ss_db_sup:put(?DB_POOL, WallObj),
 	Player.
 
 % Обновляет запись игрока. Устанавливает новые имя, девиз и иконку

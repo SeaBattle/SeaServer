@@ -22,20 +22,24 @@ process_header(Socket, ApiVersion) ->
 		true -> ok
 	end.
 
+% TODO refactor me!
 process_packet(Socket, Type, Body) when Type == guest_auth; Type == login_auth ->
 	case ss_auth_man:make_auth(Type, Body) of
-		{ok, Player} -> %TODO здесь может возникнуть ошибка и её нужно будет поймать (или не нужно. Отключать игрока при ошибках сервера или перебрасывать на другой поток?)
+		{error, Packet} ->
+			ss_main_packet:send_error(Socket, Packet),
+			error;
+		Player -> %TODO здесь может возникнуть ошибка и её нужно будет поймать (или не нужно. Отключать игрока при ошибках сервера или перебрасывать на другой поток?)
 			Response = ss_main_packet:encode_packet(player_packet, Player),
 			gen_tcp:send(Socket, Response),
-			{ok, Player};
-		Error ->
-			io:format("Got error = ~w~n", [Error]),
-			ss_main_packet:send_error(Socket, Error),
-			error
+			{ok, Player}
 	end;
 process_packet(Socket, Type, Body) when Type == register_packet ->
-	io:format("Register packet: ~p~n", [Body]),
 	case ss_auth_man:register(Body) of
-		{error, Packet} -> ss_main_packet:send_error(Socket, Packet);
-		Player -> {ok, Player}
+		{error, Packet} ->
+			ss_main_packet:send_error(Socket, Packet),
+			error;
+		Player ->
+			Response = ss_main_packet:encode_packet(player_packet, Player),
+			gen_tcp:send(Socket, Response),
+			{ok, Player}
 	end.

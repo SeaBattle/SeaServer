@@ -24,11 +24,11 @@ create_login(Login, Password, Uid) -> % TODO процесс семафор дл�
 	case ss_db_sup:get(?DB_POOL, ?PLAYERS, Uid) of
 		{ok, PlayerObj} -> % гостевая запись найдена - новую не создаём - используем текущую
 			LoginObj = riakc_obj:new(?LOGINS, Login, {Password, Uid}),  %TODO put with return_body
-			{ok, _} = ss_db_sup:put(?DB_POOL, LoginObj),
+			ok = ss_db_sup:put(?DB_POOL, LoginObj),
 			{used, PlayerObj};
 		{error, notfound} -> % запись не найдена - создаём новую
 			LoginObj = riakc_obj:new(?LOGINS, Login, Password),  %TODO put with return_body ss_db_sup:put(?DB_POOL, NewObj, [return_body])
-			{ok, _} = ss_db_sup:put(?DB_POOL, LoginObj),
+			ok = ss_db_sup:put(?DB_POOL, LoginObj),
 			created
 	end.
 
@@ -61,7 +61,7 @@ update_player(Player, Object, Name, []) -> % иконка пустая - ост�
 update_player(Player, Object, Name, Icon) ->
 	UpdatedPlayer = Player#player{name = Name, icon = Icon}, % установить новые данные и сохранить объект
 	NewObj = riakc_obj:update_value(Object, UpdatedPlayer),
-	{ok, _} = ss_db_sup:put(?DB_POOL, NewObj),
+	ok = ss_db_sup:put(?DB_POOL, NewObj),
 	UpdatedPlayer.
 
 % Создаёт стену по-умолчанию.
@@ -79,7 +79,7 @@ update_wall(Key, Motto) ->
 		_ ->
 			UpdatedWall = Wall#wall{motto = Motto}, % установить новые данные и сохранить объект
 			NewObj = riakc_obj:update_value(Object, UpdatedWall),
-			{ok, _} = ss_db_sup:put(?DB_POOL, NewObj),
+			ok = ss_db_sup:put(?DB_POOL, NewObj),
 			UpdatedWall
 	end.
 
@@ -91,7 +91,7 @@ create_ship(Type) ->
 save_ships(Ships) ->
 	lists:foldl(fun(Ship, Keys) ->
 		ShipObj = riakc_obj:new(?SHIPS, undefined, Ship),
-		case ss_db_sup:put(?DB_POOL, ShipObj) of
+		case ss_db_sup:put(?DB_POOL, ShipObj, [get_keys]) of
 			{ok, Key} -> [Key | Keys];
 			{error, _} -> Keys
 		end

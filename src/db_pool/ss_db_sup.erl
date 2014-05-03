@@ -70,7 +70,7 @@ put(PoolName, Object) ->
 	end).
 put(PoolName, Object, Params) ->
 	poolboy:transaction(PoolName, fun(Worker) ->
-		gen_server:cast(Worker, {put, Object, Params})
+		gen_server:call(Worker, {put, Object, Params})
 	end).
 
 put_async(PoolName, Object) ->
