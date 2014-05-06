@@ -36,12 +36,15 @@ make_auth(login_auth, {Login, Password}) ->
 	case ss_db_sup:get(?DB_POOL, ?LOGINS, LoginBin) of
 		{ok, Object} -> % запись найдена
 			PlayerLogin = binary_to_term(riakc_obj:get_value(Object)),
+			io:format("Found ~p~n", [PlayerLogin]),
 			if
 				Password == PlayerLogin#login.password -> % пароли совпадают - загрузить запись игрока
 					% TODO проверка на бан
 					% TODO загрузка записи игрока через login или uid
 					ok;
-				true -> {error, {403, <<"Bad password!">>}}
+				true ->
+					io:format("Password mismatch ~p - ~p~n"), %TODO вместо пересылки пароля в открытом виде использовать ЦП
+					{error, {403, <<"Bad password!">>}}
 			end;
 		{error, notfound} -> % запись не найдена - ошибка
 			{error, {404, <<"User not found!">>}};

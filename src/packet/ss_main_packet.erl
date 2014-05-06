@@ -9,6 +9,7 @@
 -module(ss_main_packet).
 -author("tihon").
 
+-include("ss_player_packet_pb.hrl").
 -include("ss_auth_packet_pb.hrl").
 -include("ss_error_packet_pb.hrl").
 -include("ss_packet_header_pb.hrl").
@@ -38,17 +39,17 @@ decode_body(Type, Binary) when Type == register_packet ->
 		{Register#register_packet.name, Register#register_packet.icon_url, Register#register_packet.motto}}.
 
 encode_packet(Type, {Code, Message}) when Type == error_packet ->
-	Binary = ss_error_packet_pb:encode_error_packet({Type, Code, Message}),
+	Binary = ss_error_packet_pb:encode_error_packet(#error_packet{code = Code, descr = Message}),
 	encode_header(Binary, Type);
 encode_packet(Type, #player{level = L, ban_type = BT, ban_end = BE, name = N, icon = I}) when Type == player_packet ->
 	BanEnd = if
 		         BE == undefined -> 0;
 		         true -> BE
 	         end,
-	Binary = ss_player_packet_pb:encode_player_packet({Type, L, BT, BanEnd, N, I}),
+	Binary = ss_player_packet_pb:encode_player_packet(#player_packet{level = L, ban_type = BT, ban_end = BanEnd, name = N, icon = I}),
 	encode_header(Binary, Type).
 
 encode_header(Binary, Type) ->
 	Protocol = seaserver_app:get_conf_param(protocol, 1),
 	MinApi = seaserver_app:get_conf_param(min_api, 1),
-	ss_packet_header_pb:encode_header({header, Type, Protocol, MinApi, Binary}).
+	ss_packet_header_pb:encode_header(#header{type = Type, protocol = Protocol, apiversion = MinApi, packet = Binary}).
