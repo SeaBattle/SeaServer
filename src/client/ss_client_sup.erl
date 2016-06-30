@@ -58,11 +58,10 @@ start_link() ->
 	ignore |
 	{error, Reason :: term()}).
 init([]) ->
-	Port = seaserver_app:get_conf_param(port, 4232),
 	Opts = [{active, true}, {keepalive, true}, {packet, 0}, {reuseaddr, true}, binary],
-	case gen_tcp:listen(Port, Opts) of
+	case gen_tcp:listen(4232, Opts) of
 		{ok, ListenSocket} ->
-			io:fwrite("~w:Listening on port ~p~n", [?MODULE, Port]),
+			io:fwrite("~w:Listening on port ~p~n", [?MODULE, 4232]),
 			RestartStrategy = {simple_one_for_one, 10, 60},
 			Listener = {ss_client_fsm, {ss_client_fsm, start_link, [ListenSocket]},
 				temporary, 2000, worker, [ss_client_fsm]},
@@ -70,10 +69,10 @@ init([]) ->
 			spawn_link(fun start_listener_pool/0),
 			{ok, {RestartStrategy, Children}};
 		{error, Reason} ->
-			io:format("Can't start server on ~p port!~nReason: ~p", [Port, Reason]),
+			io:format("Can't start server on ~p port!~nReason: ~p", [4232, Reason]),
 			{stop, Reason};
 		Other ->
-			io:format("Can't start server on ~p port!~nReason: ~p", [Port, Other]),
+			io:format("Can't start server on ~p port!~nReason: ~p", [4232, Other]),
 			{stop, Other}
 	end.
 

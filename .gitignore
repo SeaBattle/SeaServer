@@ -4,3 +4,6 @@ out
 *.iml
 rel/seaserver
 deps/
+/erl_crash.dump
+include/*_pb.hrl
+.rebar
