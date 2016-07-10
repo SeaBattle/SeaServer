@@ -35,10 +35,3 @@ send_packet(Type, Socket, {Code, Message}) when Type == error_packet ->
   Binary = ss_error_packet_pb:encode_error_packet({Type, Code, Message}),
   Packet = ss_packet_header_pb:encode_header({header, 4, Protocol, MinApi, Binary}),
   gen_tcp:send(Socket, Packet).
-
-%% guest_auth -- 1
-%% login_auth -- 2
-%% auth_resp -- 3
-%% error_packet -- 4
-%%
-%%

@@ -9,8 +9,13 @@
 -module(ss_tcp_man).
 -author("tihon").
 
+-include_lib("seaconfig/include/sc_headers.hrl").
+
+-define(DEFAULT_PROTOCOL, <<"4232">>).
+
 %% API
 -export([init/0]).
 
 init() ->
-  {ok, _} = ranch:start_listener(tcp_server, 100, ranch_tcp, [{port, 4232}], ss_tcp_handler, []).
+  PortBin = sc_conf_holder:get_conf(?SEASERVER_HANDLER_TCP_PORT, ?DEFAULT_PROTOCOL),
+  {ok, _} = ranch:start_listener(tcp_server, 100, ranch_tcp, [{port, binary_to_integer(PortBin)}], ss_tcp_handler, []).

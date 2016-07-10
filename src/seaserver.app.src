@@ -6,8 +6,9 @@
     {applications, [
       kernel,
       stdlib,
-      ranch
+      ranch,
+      seaconfig
     ]},
     {mod, {seaserver_app, []}},
-    {env, [{port, 4232}, {protocol, 1}, {min_api, 1}]}
+    {env, []}
   ]}.
