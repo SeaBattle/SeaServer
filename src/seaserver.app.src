@@ -1,12 +1,13 @@
 {application, seaserver,
- [
-  {description, ""},
-  {vsn, "1"},
-  {registered, []},
-  {applications, [
-                  kernel,
-                  stdlib
-                 ]},
-  {mod, { seaserver_app, []}},
-  {env, [{port, 4232}, {protocol, 1}, {min_api, 1}]}
- ]}.
+  [
+    {description, ""},
+    {vsn, "1"},
+    {registered, []},
+    {applications, [
+      kernel,
+      stdlib,
+      ranch
+    ]},
+    {mod, {seaserver_app, []}},
+    {env, [{port, 4232}, {protocol, 1}, {min_api, 1}]}
+  ]}.
