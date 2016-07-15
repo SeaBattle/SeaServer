@@ -7,7 +7,9 @@
       kernel,
       stdlib,
       ranch,
-      seaconfig
+      seaconfig,
+      seautils,
+      jsone
     ]},
     {mod, {seaserver_app, []}},
     {env, []}
