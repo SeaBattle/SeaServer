@@ -11,3 +11,18 @@
 
 %% API
 -export([]).
+
+get_rooms(Packet) ->
+  ok.
+
+create_room(Packet) ->
+  ok.
+
+enter_room(Packet) ->
+  ok.
+
+exit_room(Packet) ->
+  ok.
+
+send_message(Packet) ->
+  ok.
