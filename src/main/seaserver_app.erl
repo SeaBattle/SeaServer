@@ -10,7 +10,11 @@
 %% ===================================================================
 
 start(_StartType, _StartArgs) ->
-    ss_super_sup:start_link().
+  Ret = ss_super_sup:start_link(),
+  ss_handler_man:init(),
+%%  TODO find and connect other nodes
+  syn:init(),
+  Ret.
 
 stop(_State) ->
-    ok.
+  ok.

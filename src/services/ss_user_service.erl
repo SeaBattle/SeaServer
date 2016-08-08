@@ -4,28 +4,21 @@
 %%% @doc
 %%%
 %%% @end
-%%% Created : 10. Jul 2016 13:22
+%%% Created : 27. Jul 2016 20:03
 %%%-------------------------------------------------------------------
--module(ss_game_logics).
+-module(ss_user_service).
 -author("tihon").
 
+-include("ss_headers.hrl").
+
 %% API
--export([]).
+-export([register/1, login/1, login/3]).
 
-fast_play() ->
+register(Email) ->
   ok.
 
-create_game() ->
+login(Uid) ->
   ok.
 
-join_game() ->
-  ok.
-
-reject_game() ->
-  ok.
-
-send_ships() ->
-  ok.
-
-do_fire() ->
+login(Uid, Token, Service) ->
   ok.

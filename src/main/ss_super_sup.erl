@@ -23,6 +23,5 @@ start_link() ->
 %% ===================================================================
 
 init([]) ->
-	ListenerSup = ?CHILD(ss_client_sup, supervisor),
-	{ok, {{one_for_one, 5, 10}, [ListenerSup]}}.
+	{ok, {{one_for_one, 5, 10}, []}}.
 

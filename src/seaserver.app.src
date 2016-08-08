@@ -9,7 +9,8 @@
       ranch,
       seaconfig,
       seautils,
-      jsone
+      jsone,
+      syn
     ]},
     {mod, {seaserver_app, []}},
     {env, []}
