@@ -7,3 +7,4 @@ deps/
 /erl_crash.dump
 include/*_pb.hrl
 .rebar
+/.eunit/

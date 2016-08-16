@@ -10,19 +10,19 @@
 -author("tihon").
 
 %% API
--export([]).
+-export([get_rooms/1, create_room/1, enter_room/1, exit_room/1, send_message/1]).
 
-get_rooms(Packet) ->
+get_rooms(_Packet) ->
   ok.
 
-create_room(Packet) ->
+create_room(_Packet) ->
   ok.
 
-enter_room(Packet) ->
+enter_room(_Packet) ->
   ok.
 
-exit_room(Packet) ->
+exit_room(_Packet) ->
   ok.
 
-send_message(Packet) ->
+send_message(_Packet) ->
   ok.

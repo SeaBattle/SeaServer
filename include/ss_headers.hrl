@@ -18,3 +18,6 @@
 -define(USER_TOKEN, <<"token">>).      %user is registered online by this token in su_user_logic
 -define(RESULT_HEAD, <<"result">>).
 -define(CODE_HEAD, <<"code">>).
+-define(VERSION_HEAD, <<"vsn">>).
+-define(GAME_AWAIT_TTL_HEAD, <<"ttl">>).
+-define(RULES_HEAD, <<"rules">>).

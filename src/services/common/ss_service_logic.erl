@@ -14,8 +14,7 @@
 
 -define(REQUEST_TIMEOUT, 5000).
 -define(CONTENT_TYPE, "application/json").
--define(REGISTER_PATH, "/register").
--define(LOGIN_PATH, "/login").
+
 
 %% API
 -export([request_host/3]).
@@ -34,6 +33,5 @@ request_host(Service, Request, Body) ->
   end.
 
 %% @private
-get_random_host(Service) ->
-  sc_conf_holder:
+get_random_host(_Service) ->
   ok.

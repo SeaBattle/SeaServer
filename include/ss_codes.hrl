@@ -8,4 +8,6 @@
 %%%-------------------------------------------------------------------
 -author("tihon").
 
+-define(INCORRECT_SHIP_NUMBER, 401).
+
 -define(SERVER_ERROR, 500).

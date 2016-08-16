@@ -54,8 +54,8 @@ handle_cast(_Request, State) ->
 
 handle_info({tcp, Socket, Data}, State = #state{socket = Socket, transport = Transport}) ->
   Transport:setopts(Socket, [{active, once}]),
-  {Type, ProtocolVersion, ApiVersion, Body} = ss_main_packet:parse_packet(Data),
-  ss_handler_logic:,
+  {_Type, _ProtocolVersion, _ApiVersion, _Body} = ss_main_packet:parse_packet(Data),
+%%  ss_handler_logic:,
   Transport:send(Socket, Data),
   {noreply, State};
 handle_info({tcp_closed, _Socket}, State) ->
