@@ -24,7 +24,7 @@ request_host(Service, Request, Body) ->
   case get_random_host(Service) of
     [] ->
       #{?RESULT_HEAD => false, ?CODE_HEAD => ?SERVER_ERROR};
-    Host ->
+    Host -> %TODO override request timeout
       case httpc:request(post, {Host ++ Request, [], ?CONTENT_TYPE, Body}, [?REQUEST_TIMEOUT], []) of
         {{_, 200, _}, _, Res} ->
           jsone:decode(Res, [{object_format, map}]);

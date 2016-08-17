@@ -21,3 +21,4 @@
 -define(VERSION_HEAD, <<"vsn">>).
 -define(GAME_AWAIT_TTL_HEAD, <<"ttl">>).
 -define(RULES_HEAD, <<"rules">>).
+-define(GAME_ID_HEAD, <<"game_id">>).

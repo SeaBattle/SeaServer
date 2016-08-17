@@ -14,11 +14,11 @@
 %% API
 -export([register/1, login/1, login/3]).
 
-register(Email) ->
+register(_Email) ->
   ok.
 
-login(Uid) ->
+login(_Uid) ->
   ok.
 
-login(Uid, Token, Service) ->
+login(_Uid, _Token, _Service) ->
   ok.

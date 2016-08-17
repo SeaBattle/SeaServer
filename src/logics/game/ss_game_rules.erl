@@ -12,6 +12,7 @@
 -include("ss_codes.hrl").
 
 -define(DEFAULT_PLACING, false).
+-define(DEFAULT_RECONNECT_TIMER, <<"5s">>).  %5 seconds
 -define(DEFAULT_REPEAT_ON_HIT, true).
 -define(DEFAULT_FIRES_PER_TURN, 1).
 -define(DEFAULT_1_DECK_SHIPS, 4).
@@ -26,6 +27,7 @@
 -spec form_rules(map()) -> binary().
 form_rules(Rules) ->
   Placing = get_allow_near_placing(Rules),
+  Reconnect = get_reconnect_timer(Rules),
   Repeat = get_repeat_turn_on_hit(Rules),
   Fires = get_fires_per_turn(Rules),
   Ships = get_ships_sizes(Rules),
@@ -33,8 +35,11 @@ form_rules(Rules) ->
     0 -> throw({error, ?INCORRECT_SHIP_NUMBER});
     _ -> ok
   end,
-  compile_rules(Placing, Repeat, Fires, Ships).
+  compile_rules(Placing, Repeat, Fires, Ships, Reconnect).
 
+%% @private
+get_reconnect_timer(#{<<"reconnect_timer">> := B}) when is_binary(B) -> B;
+get_reconnect_timer(_) -> ?DEFAULT_RECONNECT_TIMER. %forbid infinity timer
 
 %% @private
 get_allow_near_placing(#{<<"allow_near_placing">> := B}) when is_boolean(B) -> B;
@@ -65,12 +70,15 @@ get_ship_size(Map, Type, Default) ->
   end.
 
 %% @private
--spec compile_rules(boolean(), boolean(), integer(), list(integer())) -> binary().
-compile_rules(Placing, Repeat, Fires, Ships) ->
-  All = [Placing | [Repeat | [Fires | Ships]]],
-  lists:foldl(
-    fun
-      (true, Acc) -> <<Acc/binary, 1>>;
-      (false, Acc) -> <<Acc/binary, 0>>;
-      (Int, Acc) when is_integer(Int) -> <<Acc/binary, Int>>
-    end, <<>>, All).
+-spec compile_rules(boolean(), boolean(), integer(), list(integer()), binary()) -> binary().
+compile_rules(Placing, Repeat, Fires, Ships, Reconnect) ->
+  All = [Placing | [Repeat | [Fires | [Ships | [Reconnect]]]]],
+  compile_rule(All, <<>>).
+
+%% @private
+compile_rule(true, Acc) -> <<Acc/binary, 1>>;
+compile_rule(false, Acc) -> <<Acc/binary, 0>>;
+compile_rule(Bin, Acc) when is_binary(Bin) -> <<Acc/binary, Bin/binary>>;
+compile_rule(Int, Acc) when is_integer(Int) -> <<Acc/binary, Int>>;
+compile_rule(List, Acc) when is_list(List) ->
+  lists:foldl(fun compile_rule/2, Acc, List).

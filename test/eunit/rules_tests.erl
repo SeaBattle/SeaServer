@@ -18,13 +18,14 @@ form_full_rules_test() ->
       <<"allow_near_placing">> => true,
       <<"repeat_turn_on_hit">> => false,
       <<"fires_per_turn">> => 5,
+      <<"reconnect_timer">> => <<"inf">>,
       <<"deck1">> => 0,
       <<"deck2">> => 3,
       <<"deck3">> => 2,
       <<"deck4">> => 1,
       <<"deck5">> => 1
     },
-  ?assertEqual(<<1, 0, 5, 0, 3, 2, 1, 1>>, ss_game_rules:form_rules(Rules)).
+  ?assertEqual(<<1, 0, 5, 0, 3, 2, 1, 1, 105, 110, 102>>, ss_game_rules:form_rules(Rules)).
 
 form_partial_rules_test() ->
   Rules =
@@ -33,10 +34,10 @@ form_partial_rules_test() ->
       <<"repeat_turn_on_hit">> => false,
       <<"fires_per_turn">> => 5
     },
-  ?assertEqual(<<1, 0, 5, 4, 3, 2, 1, 0>>, ss_game_rules:form_rules(Rules)).
+  ?assertEqual(<<1, 0, 5, 4, 3, 2, 1, 0, 53, 115>>, ss_game_rules:form_rules(Rules)).
 
 form_default_rules_test() ->
-  ?assertEqual(<<0, 1, 1, 4, 3, 2, 1, 0>>, ss_game_rules:form_rules(#{})).
+  ?assertEqual(<<0, 1, 1, 4, 3, 2, 1, 0, 53, 115>>, ss_game_rules:form_rules(#{})).
 
 incorrect_ship_num_test() ->
   Rules =

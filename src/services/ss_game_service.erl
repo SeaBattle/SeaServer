@@ -12,11 +12,11 @@
 %% API
 -export([]).
 
-create_game() ->
-  ok.
-
-join_game() ->
-  ok.
-
-fast_play() ->
-  ok.
+%%create_game() ->
+%%  ok.
+%%
+%%join_game() ->
+%%  ok.
+%%
+%%fast_play() ->
+%%  ok.
