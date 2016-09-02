@@ -11,33 +11,52 @@
 
 -include_lib("eunit/include/eunit.hrl").
 -include("ss_codes.hrl").
+-include("ss_headers.hrl").
 
 form_full_rules_test() ->
   Rules =
     #{
-      <<"allow_near_placing">> => true,
-      <<"repeat_turn_on_hit">> => false,
-      <<"fires_per_turn">> => 5,
-      <<"reconnect_timer">> => <<"inf">>,
-      <<"deck1">> => 0,
-      <<"deck2">> => 3,
-      <<"deck3">> => 2,
-      <<"deck4">> => 1,
-      <<"deck5">> => 1
+      ?NEAR_PLACING_HEAD => true,
+      ?REPEAT_ON_HIT_HEAD => false,
+      ?FIRES_PER_TURN_HEAD => 5,
+      ?RECONNECT_TIMER_HEAD => <<"inf">>,
+      ?SHIP_DECK1_HEAD => 0,
+      ?SHIP_DECK2_HEAD => 3,
+      ?SHIP_DECK3_HEAD => 2,
+      ?SHIP_DECK4_HEAD => 1,
+      ?SHIP_DECK5_HEAD => 1
     },
-  ?assertEqual(<<1, 0, 5, 0, 3, 2, 1, 1, 105, 110, 102>>, ss_game_rules:form_rules(Rules)).
+  RulesEnc = ss_game_rules:encode_rules(Rules),
+  ?assertEqual(Rules, ss_game_rules:decode_rules(RulesEnc)).
 
 form_partial_rules_test() ->
   Rules =
     #{
-      <<"allow_near_placing">> => true,
-      <<"repeat_turn_on_hit">> => false,
-      <<"fires_per_turn">> => 5
+      ?REPEAT_ON_HIT_HEAD => false,
+      ?NEAR_PLACING_HEAD => true,
+      ?FIRES_PER_TURN_HEAD => 5
     },
-  ?assertEqual(<<1, 0, 5, 4, 3, 2, 1, 0, 53, 115>>, ss_game_rules:form_rules(Rules)).
+  RulesEnc = ss_game_rules:encode_rules(Rules),
+  RulesFull =
+    Rules#{?RECONNECT_TIMER_HEAD => <<"5s">>, ?SHIP_DECK1_HEAD => 4, ?SHIP_DECK2_HEAD => 3,
+      ?SHIP_DECK3_HEAD => 2, ?SHIP_DECK4_HEAD => 1, ?SHIP_DECK5_HEAD => 0},
+  ?assertEqual(RulesFull, ss_game_rules:decode_rules(RulesEnc)).
 
 form_default_rules_test() ->
-  ?assertEqual(<<0, 1, 1, 4, 3, 2, 1, 0, 53, 115>>, ss_game_rules:form_rules(#{})).
+  Default =
+    #{
+      ?RECONNECT_TIMER_HEAD => <<"5s">>,
+      ?REPEAT_ON_HIT_HEAD => true,
+      ?NEAR_PLACING_HEAD => false,
+      ?FIRES_PER_TURN_HEAD => 1,
+      ?SHIP_DECK1_HEAD => 4,
+      ?SHIP_DECK2_HEAD => 3,
+      ?SHIP_DECK3_HEAD => 2,
+      ?SHIP_DECK4_HEAD => 1,
+      ?SHIP_DECK5_HEAD => 0
+    },
+  DefaultEnc = ss_game_rules:encode_rules(#{}),
+  ?assertEqual(Default, ss_game_rules:decode_rules(DefaultEnc)).
 
 incorrect_ship_num_test() ->
   Rules =
@@ -51,7 +70,7 @@ incorrect_ship_num_test() ->
       <<"deck4">> => 0,
       <<"deck5">> => 0
     },
-  Res = try ss_game_rules:form_rules(Rules)
+  Res = try ss_game_rules:encode_rules(Rules)
         catch throw:Err -> Err
         end,
   ?assertEqual({error, ?INCORRECT_SHIP_NUMBER}, Res).

@@ -22,3 +22,14 @@
 -define(GAME_AWAIT_TTL_HEAD, <<"ttl">>).
 -define(RULES_HEAD, <<"rules">>).
 -define(GAME_ID_HEAD, <<"game_id">>).
+
+%% rules
+-define(RECONNECT_TIMER_HEAD, <<"reconnect_timer">>).
+-define(NEAR_PLACING_HEAD, <<"allow_near_placing">>).
+-define(REPEAT_ON_HIT_HEAD, <<"repeat_turn_on_hit">>).
+-define(FIRES_PER_TURN_HEAD, <<"fires_per_turn">>).
+-define(SHIP_DECK1_HEAD, <<"deck1">>).
+-define(SHIP_DECK2_HEAD, <<"deck2">>).
+-define(SHIP_DECK3_HEAD, <<"deck3">>).
+-define(SHIP_DECK4_HEAD, <<"deck4">>).
+-define(SHIP_DECK5_HEAD, <<"deck5">>).
