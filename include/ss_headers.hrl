@@ -24,12 +24,23 @@
 -define(GAME_ID_HEAD, <<"game_id">>).
 
 %% rules
--define(RECONNECT_TIMER_HEAD, <<"reconnect_timer">>).
--define(NEAR_PLACING_HEAD, <<"allow_near_placing">>).
--define(REPEAT_ON_HIT_HEAD, <<"repeat_turn_on_hit">>).
--define(FIRES_PER_TURN_HEAD, <<"fires_per_turn">>).
--define(SHIP_DECK1_HEAD, <<"deck1">>).
--define(SHIP_DECK2_HEAD, <<"deck2">>).
--define(SHIP_DECK3_HEAD, <<"deck3">>).
--define(SHIP_DECK4_HEAD, <<"deck4">>).
--define(SHIP_DECK5_HEAD, <<"deck5">>).
+%how many time game should wait after terminating player for reconnect to make a technical win
+-define(RECONNECT_TIMER_HEAD, <<"reconnect_timer">>). %can be binaries of <<"NM">>, where N is integer and M is hh/mm/ss
+-define(NEAR_PLACING_HEAD, <<"allow_near_placing">>). %allow ships be placed near each other
+-define(REPEAT_ON_HIT_HEAD, <<"repeat_turn_on_hit">>).  %can player repeat turn when he hit enemy ship
+-define(FIRES_PER_TURN_HEAD, <<"fires_per_turn">>). %how many fires can be made by player before turn changes
+-define(SHIP_DECK1_HEAD, <<"deck1">>).  %deck1 ship
+-define(SHIP_DECK2_HEAD, <<"deck2">>).  %deck2 ship
+-define(SHIP_DECK3_HEAD, <<"deck3">>).  %deck3 ship
+-define(SHIP_DECK4_HEAD, <<"deck4">>).  %deck4 ship
+-define(SHIP_DECK5_HEAD, <<"deck5">>).  %deck5 ship
+
+%% ship
+-define(SHIP_ID_HEAD, <<"id">>).
+-define(SHIP_X_POS_HEAD, <<"x">>).
+-define(SHIP_Y_POS_HEAD, <<"y">>).
+-define(SHIP_DIRECTION_HEAD, <<"W">>).
+-define(SHIP_SIZE_HEAD, <<"size">>).
+
+%% game
+-define(SHIPS, <<"ships">>).  %ships array with {id, size, x, y, w} position

@@ -6,7 +6,7 @@
 %%% @end
 %%% Created : 10. Jul 2016 13:22
 %%%-------------------------------------------------------------------
--module(ss_game_logics).
+-module(ss_game_man).
 -author("tihon").
 
 -include("ss_codes.hrl").
@@ -23,7 +23,7 @@
 %% TODO users should have some limit on not ended games (and should exit such games)
 fast_play(Packet = #{?VERSION_HEAD := Vsn, ?UID_HEAD := UID}) ->  %TODO may be save uid in thread as a state is more secure?
   TTL = get_ttl(Packet),
-  RulesKey = ss_game_rules:form_rules(Packet),
+  RulesKey = ss_game_rules:encode_rules(Packet),
   Request = #{?GAME_AWAIT_TTL_HEAD => TTL, ?RULES_HEAD => RulesKey, ?UID_HEAD => UID, ?VERSION_HEAD => Vsn},
   case ss_service_logic:request_host("127.0.0.1", ?FAST_GAME_PATH, jsone:encode(Request)) of
     #{?RESULT_HEAD := true, ?CODE_HEAD := ?OK, ?GAME_ID_HEAD := _GID, ?UID_HEAD := _EUID, ?RULES_HEAD := _Rules} ->  %game found
@@ -45,7 +45,7 @@ join_game(_Packet) ->
 reject_game(_Packet) ->
   ok.
 
-send_ships(_Packet) ->
+send_ships(_Packet = #{?GAME_ID_HEAD := _GID, ?SHIPS := _Ships}) ->
   ok.
 
 do_fire(_Packet) ->

@@ -12,25 +12,39 @@
 -behaviour(gen_fsm).
 
 %% API
--export([start_link/1]).
+-export([start_link/1, send_ships/2]).
 
 %% gen_fsm callbacks
 -export([init/1,
-  state_name/2,
-  state_name/3,
   handle_event/3,
   handle_sync_event/4,
   handle_info/3,
   terminate/3,
   code_change/4]).
 
+-export(
+[
+  prepare/2, prepare/3  %two players should send their ship packages.
+]).
+
 -define(SERVER, ?MODULE).
 
--record(state, {}).
+-record(state,
+{
+  game_id :: binary(),
+  player1 :: {pid(), binary()},
+  player2 :: {pid(), binary()},
+  fleet_player1 = [] :: map(),
+  fleet_player2 = [] :: map(),
+  active = 1 :: pos_integer(),
+  rules :: map()
+}).
 
 %%%===================================================================
 %%% API
 %%%===================================================================
+send_ships(Gid, Ships) ->
+  gen_fsm:sync_send_event(Gid, {ships, Ships}).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -41,83 +55,39 @@
 %% @end
 %%--------------------------------------------------------------------
 -spec(start_link(list()) -> {ok, pid()} | ignore | {error, Reason :: term()}).
-start_link(Args = [GID | _]) ->
-  gen_fsm:start_link({local, GID}, ?MODULE, Args, []).
+start_link(Args = [GID | _]) -> %TODO gid is not atom. Register me in syn.
+  gen_fsm:start_link({global, GID}, ?MODULE, Args, []).
 
 %%%===================================================================
 %%% gen_fsm callbacks
 %%%===================================================================
 
-%%--------------------------------------------------------------------
-%% @private
-%% @doc
-%% Whenever a gen_fsm is started using gen_fsm:start/[3,4] or
-%% gen_fsm:start_link/[3,4], this function is called by the new
-%% process to initialize.
-%%
-%% @end
-%%--------------------------------------------------------------------
 -spec(init(Args :: term()) ->
   {ok, StateName :: atom(), StateData :: #state{}} |
   {ok, StateName :: atom(), StateData :: #state{}, timeout() | hibernate} |
   {stop, Reason :: term()} | ignore).
 init([GID, UID1, UID2, Rules]) ->
-  {ok, state_name, #state{}}.
+  Pid1 = ss_utils:uid_to_pid(UID1), %TODO use syn instead
+  Pid2 = ss_utils:uid_to_pid(UID2),
+  monitor(process, Pid1),
+  monitor(process, Pid2),
+  RulesMap = ss_game_rules:decode_rules(Rules),
+  {ok, prepare, #state{game_id = GID, player1 = {Pid1, UID1}, player2 = {Pid2, UID2}, rules = RulesMap}}.
 
-%%--------------------------------------------------------------------
-%% @private
-%% @doc
-%% There should be one instance of this function for each possible
-%% state name. Whenever a gen_fsm receives an event sent using
-%% gen_fsm:send_event/2, the instance of this function with the same
-%% name as the current state name StateName is called to handle
-%% the event. It is also called if a timeout occurs.
-%%
-%% @end
-%%--------------------------------------------------------------------
--spec(state_name(Event :: term(), State :: #state{}) ->
-  {next_state, NextStateName :: atom(), NextState :: #state{}} |
-  {next_state, NextStateName :: atom(), NextState :: #state{},
-    timeout() | hibernate} |
-  {stop, Reason :: term(), NewState :: #state{}}).
-state_name(_Event, State) ->
-  {next_state, state_name, State}.
+prepare(_Event, State) ->
+  {next_state, prepare, State}.
 
-%%--------------------------------------------------------------------
-%% @private
-%% @doc
-%% There should be one instance of this function for each possible
-%% state name. Whenever a gen_fsm receives an event sent using
-%% gen_fsm:sync_send_event/[2,3], the instance of this function with
-%% the same name as the current state name StateName is called to
-%% handle the event.
-%%
-%% @end
-%%--------------------------------------------------------------------
--spec(state_name(Event :: term(), From :: {pid(), term()},
-    State :: #state{}) ->
-  {next_state, NextStateName :: atom(), NextState :: #state{}} |
-  {next_state, NextStateName :: atom(), NextState :: #state{},
-    timeout() | hibernate} |
-  {reply, Reply, NextStateName :: atom(), NextState :: #state{}} |
-  {reply, Reply, NextStateName :: atom(), NextState :: #state{},
-    timeout() | hibernate} |
-  {stop, Reason :: normal | term(), NewState :: #state{}} |
-  {stop, Reason :: normal | term(), Reply :: term(),
-    NewState :: #state{}}).
-state_name(_Event, _From, State) ->
+prepare({ships, Ships}, _From, State = #state{rules = Rules, player1 = {_P1, _}}) ->
+  set_flit_to_player(_From, State),
+  Reply = case ss_ship_logic:place_ships(Ships, Rules) of %TODO catch
+            Fleet1 when is_list(Fleet1) -> ok;
+            Error -> {false, Error}
+          end,  %TODO change state if all fleets are set
+  {reply, Reply, prepare, State#state{}};
+prepare(_Event, _From, State) ->
   Reply = ok,
   {reply, Reply, state_name, State}.
 
-%%--------------------------------------------------------------------
-%% @private
-%% @doc
-%% Whenever a gen_fsm receives an event sent using
-%% gen_fsm:send_all_state_event/2, this function is called to handle
-%% the event.
-%%
-%% @end
-%%--------------------------------------------------------------------
 -spec(handle_event(Event :: term(), StateName :: atom(),
     StateData :: #state{}) ->
   {next_state, NextStateName :: atom(), NewStateData :: #state{}} |
@@ -127,15 +97,6 @@ state_name(_Event, _From, State) ->
 handle_event(_Event, StateName, State) ->
   {next_state, StateName, State}.
 
-%%--------------------------------------------------------------------
-%% @private
-%% @doc
-%% Whenever a gen_fsm receives an event sent using
-%% gen_fsm:sync_send_all_state_event/[2,3], this function is called
-%% to handle the event.
-%%
-%% @end
-%%--------------------------------------------------------------------
 -spec(handle_sync_event(Event :: term(), From :: {pid(), Tag :: term()},
     StateName :: atom(), StateData :: term()) ->
   {reply, Reply :: term(), NextStateName :: atom(), NewStateData :: term()} |
@@ -150,15 +111,6 @@ handle_sync_event(_Event, _From, StateName, State) ->
   Reply = ok,
   {reply, Reply, StateName, State}.
 
-%%--------------------------------------------------------------------
-%% @private
-%% @doc
-%% This function is called by a gen_fsm when it receives any
-%% message other than a synchronous or asynchronous event
-%% (or a system message).
-%%
-%% @end
-%%--------------------------------------------------------------------
 -spec(handle_info(Info :: term(), StateName :: atom(),
     StateData :: term()) ->
   {next_state, NextStateName :: atom(), NewStateData :: term()} |
@@ -168,28 +120,11 @@ handle_sync_event(_Event, _From, StateName, State) ->
 handle_info(_Info, StateName, State) ->
   {next_state, StateName, State}.
 
-%%--------------------------------------------------------------------
-%% @private
-%% @doc
-%% This function is called by a gen_fsm when it is about to
-%% terminate. It should be the opposite of Module:init/1 and do any
-%% necessary cleaning up. When it returns, the gen_fsm terminates with
-%% Reason. The return value is ignored.
-%%
-%% @end
-%%--------------------------------------------------------------------
 -spec(terminate(Reason :: normal | shutdown | {shutdown, term()}
 | term(), StateName :: atom(), StateData :: term()) -> term()).
 terminate(_Reason, _StateName, _State) ->
   ok.
 
-%%--------------------------------------------------------------------
-%% @private
-%% @doc
-%% Convert process state when code is changed
-%%
-%% @end
-%%--------------------------------------------------------------------
 -spec(code_change(OldVsn :: term() | {down, term()}, StateName :: atom(),
     StateData :: #state{}, Extra :: term()) ->
   {ok, NextStateName :: atom(), NewStateData :: #state{}}).
@@ -199,3 +134,6 @@ code_change(_OldVsn, StateName, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+%% @private
+set_flit_to_player(SenderPid, #state{player1 = {SenderPid, _}}) -> fleet_player1;
+set_flit_to_player(SenderPid, #state{player2 = {SenderPid, _}}) -> fleet_player2.

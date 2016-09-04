@@ -11,6 +11,7 @@
 -define(OK, 0).
 
 -define(INCORRECT_SHIP_NUMBER, 401).
+-define(INCORRECT_SHIP_POSITION, 402).
 
 -define(SERVER_ERROR, 500).
 
