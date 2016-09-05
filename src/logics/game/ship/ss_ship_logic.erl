@@ -37,22 +37,32 @@ place_ship(#{?SHIP_ID_HEAD := Id, ?SHIP_X_POS_HEAD := X,
 
 %% @private
 can_be_placed(X, Y, <<"h">>, Size, Map, Near) ->
+  {USize, UX, _UY} = size_with_near(Size, X, Y, Near),
   HorizontAfter = get_horizont_line(Y + 1, Map),
   HorizontShip = get_horizont_line(Y, Map),
   HorizontBefore = get_horizont_line(Y - 1, Map),
-  case check_horizont(HorizontShip, X, Size) of
+  case check_horizont(HorizontShip, UX, USize) of
     true when Near =:= true -> true;
     true when Near =:= false ->
-      check_horizont(HorizontAfter, X, Size) andalso check_horizont(HorizontBefore, X, Size);
+      check_horizont(HorizontAfter, UX, USize) andalso check_horizont(HorizontBefore, UX, USize);
     false -> false
   end;
 can_be_placed(X, Y, <<"w">>, Size, Map, Near) when Y + Size =< 10 ->
-  case check_vertical(X, Y, Size, Map) of
+  {USize, _UX, UY} = size_with_near(Size, X, Y, Near),
+  case check_vertical(X, UY, USize, Map) of
     true when Near =:= true -> true;
     true when Near =:= false ->
-      check_vertical(X, Y + 1, Size, Map) andalso check_vertical(X, Y - 1, Size, Map);
+      check_vertical(X, UY + 1, USize, Map) andalso check_vertical(X, UY - 1, USize, Map);
     false -> false
   end.
+
+%% @private
+size_with_near(Size, X, Y, true) -> {Size, X, Y};
+size_with_near(Size, X, Y, false) -> {Size + 1, null_or_more(X), null_or_more(Y)}.
+
+%% @private
+null_or_more(0) -> 0;
+null_or_more(N) -> N - 1.
 
 %% @private
 do_place_ship(Id, X, Y, <<"h">>, Size, Map) ->
@@ -74,7 +84,7 @@ check_horizont(Line, X, Length) when is_binary(Line), X + Length < 10 ->
     fun
       (_, false) -> false;
       (XN, _) -> ?CHECK_SHIP_X(Line, X + XN)
-    end, true, lists:seq(0, Length));
+    end, true, lists:seq(0, Length - 1));
 check_horizont(_, _, _) -> false.
 
 %% @private
@@ -87,7 +97,7 @@ check_vertical(X, Y, Size, Map) ->
         K = Y + N,
         Line = get_horizont_line(K, Map),
         Line =:= undefined orelse ?CHECK_SHIP_X(Line, X)
-    end, true, lists:seq(0, Size)).
+    end, true, lists:seq(0, Size - 1)).
 
 
 %% @private
