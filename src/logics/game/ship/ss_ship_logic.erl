@@ -73,8 +73,8 @@ check_horizont(Line, X, Length) when is_binary(Line), X + Length < 10 ->
   lists:foldl(
     fun
       (_, false) -> false;
-      (XN, _) -> ?CHECK_SHIP_X(Line, XN)
-    end, ?CHECK_SHIP_X(Line, X), lists:seq(1, Length - 1));
+      (XN, _) -> ?CHECK_SHIP_X(Line, X + XN)
+    end, true, lists:seq(0, Length));
 check_horizont(_, _, _) -> false.
 
 %% @private
@@ -84,9 +84,9 @@ check_vertical(X, Y, Size, Map) ->
     fun
       (_, false) -> false;
       (N, _) ->
-        K = X + N,
+        K = Y + N,
         Line = get_horizont_line(K, Map),
-        Line =:= undefined orelse ?CHECK_SHIP_X(Line, Y)
+        Line =:= undefined orelse ?CHECK_SHIP_X(Line, X)
     end, true, lists:seq(0, Size)).
 
 
@@ -97,6 +97,6 @@ empty_map() ->
 
 %% @private
 get_horizont_line(Y, _) when Y < 0; Y > 10 -> undefined;
-get_horizont_line(Y, Map) when is_map(Map)->
+get_horizont_line(Y, Map) when is_map(Map) ->
   #{Y := Line} = Map,
   Line.
