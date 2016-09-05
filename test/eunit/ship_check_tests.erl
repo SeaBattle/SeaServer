@@ -11,70 +11,77 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
-check_horizontal_begin_test() ->
-  Line = <<0, 0, 0, 0, 0, 0, 0, 0, 0, 0>>,
-  X = 0,
-  Length = 4,
-  ?assert(ss_ship_logic:check_horizont(Line, X, Length)).
 
-check_horizontal_end_test() ->
-  Line = <<0, 0, 0, 0, 0, 0, 0, 0, 0, 0>>,
-  X = 5,
-  Length = 4,
-  ?assert(ss_ship_logic:check_horizont(Line, X, Length)).
-
-check_horizontal_out_of_bounds_test() ->
-  Line = <<0, 0, 0, 0, 0, 0, 0, 0, 0, 0>>,
-  Length = 4,
-  ?assertNot(ss_ship_logic:check_horizont(Line, 10, Length)),
-  ?assertNot(ss_ship_logic:check_horizont(Line, 7, Length)).
-
-check_horizontal_other_ship_test() ->
-  Line = <<0, 0, 0, 0, 0, 5, 5, 5, 0, 0>>,
-  Length = 4,
-  ?assert(ss_ship_logic:check_horizont(Line, 0, Length)),
-  ?assert(ss_ship_logic:check_horizont(Line, 1, Length)),
-  ?assertNot(ss_ship_logic:check_horizont(Line, 3, Length)),
-  ?assertNot(ss_ship_logic:check_horizont(Line, 8, Length)).
-
-check_vertical_begin_test() ->
-  Map = ss_ship_logic:empty_map(),
-  X = 0,
-  Y = 0,
-  Size = 4,
-  ?assert(ss_ship_logic:check_vertical(X, Y, Size, Map)).
-
-check_vertical_end_test() ->
-  Map = ss_ship_logic:empty_map(),
-  X = 0,
-  Y = 5,
-  Size = 4,
-  ?assert(ss_ship_logic:check_vertical(X, Y, Size, Map)).
-
-check_vertical_out_of_bounds_test() ->
-  Map = ss_ship_logic:empty_map(),
-  Size = 4,
-  ?assertNot(ss_ship_logic:check_vertical(0, 7, Size, Map)).
-
-check_vertical_other_ship_test() ->
+cut_h_test() ->
   Map =
-  #{
-    0 => <<0, 0, 0, 0, 0, 0, 0, 0, 0, 0>>,
-    1 => <<0, 0, 0, 2, 0, 0, 0, 0, 0, 0>>,
-    2 => <<0, 0, 0, 2, 0, 0, 0, 0, 0, 0>>,
-    3 => <<0, 0, 0, 2, 0, 0, 0, 0, 0, 0>>,
-    4 => <<0, 0, 0, 0, 0, 0, 0, 0, 0, 0>>,
-    5 => <<0, 0, 0, 0, 0, 0, 0, 0, 0, 0>>,
-    6 => <<0, 0, 0, 0, 0, 0, 0, 8, 0, 0>>,
-    7 => <<0, 0, 0, 0, 0, 0, 0, 8, 0, 0>>,
-    8 => <<0, 0, 0, 0, 0, 0, 0, 0, 0, 0>>,
-    9 => <<0, 0, 0, 0, 0, 0, 0, 0, 0, 0>>
-  },
-  Size = 4,
-  ?assert(ss_ship_logic:check_vertical(4, 1, Size, Map)),
-  ?assert(ss_ship_logic:check_vertical(7, 2, Size, Map)),
-  ?assertNot(ss_ship_logic:check_vertical(3, 1, Size, Map)),
-  ?assertNot(ss_ship_logic:check_vertical(3, 3, Size, Map)).
+    #{
+      0 => <<0, 1, 2, 3, 4, 5, 6, 7, 8, 9>>,
+      1 => <<1, 1, 2, 3, 4, 5, 6, 7, 8, 9>>,
+      2 => <<2, 2, 2, 2, 2, 2, 2, 2, 2, 2>>,
+      3 => <<3, 3, 3, 3, 3, 3, 3, 3, 3, 3>>,
+      4 => <<4, 4, 4, 4, 4, 4, 4, 4, 4, 4>>,
+      5 => <<5, 5, 5, 5, 5, 5, 5, 5, 5, 5>>,
+      6 => <<6, 6, 6, 6, 6, 6, 6, 6, 6, 6>>,
+      7 => <<7, 7, 7, 7, 7, 7, 7, 7, 7, 7>>,
+      8 => <<8, 8, 8, 8, 8, 8, 8, 8, 8, 8>>,
+      9 => <<9, 9, 9, 9, 9, 9, 9, 9, 9, 9>>
+    },
+  ?assertEqual([<<0, 1, 2, 3>>], ss_ship_logic:cut_space(Map, 0, 0, 4, <<"h">>, true)),
+  ?assertEqual([<<0>>], ss_ship_logic:cut_space(Map, 0, 0, 1, <<"h">>, true)),
+  ?assertEqual([<<6, 7, 8, 9>>], ss_ship_logic:cut_space(Map, 6, 1, 4, <<"h">>, true)),
+  ?assertEqual([], ss_ship_logic:cut_space(Map, 7, 1, 4, <<"h">>, true)),
+
+  ?assertEqual(
+    [
+      <<1, 1, 2, 3, 4>>,
+      <<0, 1, 2, 3, 4>>
+    ], ss_ship_logic:cut_space(Map, 0, 0, 4, <<"h">>, false)),
+  ?assertEqual(
+    [
+      <<1, 1>>,
+      <<0, 1>>
+    ], ss_ship_logic:cut_space(Map, 0, 0, 1, <<"h">>, false)),
+  ?assertEqual(
+    [
+      <<6, 6, 6>>,
+      <<5, 5, 5>>,
+      <<4, 4, 4>>
+    ], ss_ship_logic:cut_space(Map, 5, 5, 1, <<"h">>, false)),
+  ?assertEqual(
+    [
+      <<2, 2, 2, 2, 2>>,
+      <<5, 6, 7, 8, 9>>,
+      <<5, 6, 7, 8, 9>>
+    ], ss_ship_logic:cut_space(Map, 6, 1, 4, <<"h">>, false)),
+  ?assertEqual([], ss_ship_logic:cut_space(Map, 7, 1, 4, <<"h">>, false)),
+  ok.
+
+cut_w_test() ->
+  Map =
+    #{
+      0 => <<0, 1, 2, 3, 4, 5, 6, 7, 8, 9>>,
+      1 => <<1, 1, 2, 3, 4, 5, 6, 7, 8, 9>>,
+      2 => <<2, 2, 2, 2, 2, 2, 2, 2, 2, 2>>,
+      3 => <<3, 3, 3, 3, 3, 3, 3, 3, 3, 3>>,
+      4 => <<4, 4, 4, 4, 4, 4, 4, 4, 4, 4>>,
+      5 => <<5, 5, 5, 5, 5, 5, 5, 5, 5, 5>>,
+      6 => <<6, 6, 6, 6, 6, 6, 6, 6, 6, 6>>,
+      7 => <<7, 7, 7, 7, 7, 7, 7, 7, 7, 7>>,
+      8 => <<8, 8, 8, 8, 8, 8, 8, 8, 8, 8>>,
+      9 => <<9, 9, 9, 9, 9, 9, 9, 9, 9, 9>>
+    },
+  ?assertEqual([0, 1, 2, 3], ss_ship_logic:cut_space(Map, 0, 0, 4, <<"w">>, true)),
+  ?assertEqual([0], ss_ship_logic:cut_space(Map, 0, 0, 1, <<"w">>, true)),
+  ?assertEqual([6, 2, 3, 4], ss_ship_logic:cut_space(Map, 6, 1, 4, <<"w">>, true)),
+  ?assertEqual([], ss_ship_logic:cut_space(Map, 1, 7, 4, <<"w">>, true)),
+
+  ?assertEqual([1, 0, 1, 1, 2, 2, 3, 3, 4, 4], ss_ship_logic:cut_space(Map, 0, 0, 4, <<"w">>, false)),
+  ?assertEqual([1, 0, 1, 1], ss_ship_logic:cut_space(Map, 0, 0, 1, <<"w">>, false)),
+  ?assertEqual([4, 4, 4, 5, 5, 5, 6, 6, 6], ss_ship_logic:cut_space(Map, 5, 5, 1, <<"w">>, false)),
+  ?assertEqual(
+    [5, 7, 6, 5, 7, 6, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5], ss_ship_logic:cut_space(Map, 6, 1, 4, <<"w">>, false)),
+  ?assertEqual([], ss_ship_logic:cut_space(Map, 1, 7, 4, <<"w">>, false)),
+  ok.
 
 can_be_placed_near_test() ->
   Map =
