@@ -13,12 +13,12 @@
 -include_lib("eunit/include/eunit.hrl").
 
 place_correct_test() ->
-  EmptyMap = ss_ship_logic:empty_map(),
-  MapWithShip = ss_ship_logic:place_ship(#{?SHIP_ID_HEAD => 10, ?SHIP_X_POS_HEAD => 2,
+  EmptyMap = ss_map_logic:empty_map(),
+  MapWithShip = ss_map_logic:place_ship(#{?SHIP_ID_HEAD => 10, ?SHIP_X_POS_HEAD => 2,
     ?SHIP_Y_POS_HEAD => 3, ?SHIP_DIRECTION_HEAD => <<"h">>, ?SHIP_SIZE_HEAD => 3}, EmptyMap, true),
   ?assertEqual(EmptyMap#{3 => <<0, 0, 10, 10, 10, 0, 0, 0, 0, 0>>}, MapWithShip),
 
-  MapWithShip2 = ss_ship_logic:place_ship(#{?SHIP_ID_HEAD => 3, ?SHIP_X_POS_HEAD => 5,
+  MapWithShip2 = ss_map_logic:place_ship(#{?SHIP_ID_HEAD => 3, ?SHIP_X_POS_HEAD => 5,
     ?SHIP_Y_POS_HEAD => 4, ?SHIP_DIRECTION_HEAD => <<"w">>, ?SHIP_SIZE_HEAD => 4}, MapWithShip, true),
   Expected = MapWithShip#{
     4 => <<0, 0, 0, 0, 0, 3, 0, 0, 0, 0>>,
@@ -43,7 +43,7 @@ check_n_place_w_test() ->
       8 => <<1, 1, 1, 1, 1, 1, 1, 1, 1, 1>>,
       9 => <<1, 1, 1, 1, 1, 1, 1, 1, 1, 1>>
     },
-  MapWithShip = ss_ship_logic:place_ship(#{?SHIP_ID_HEAD => 3, ?SHIP_X_POS_HEAD => 3,
+  MapWithShip = ss_map_logic:place_ship(#{?SHIP_ID_HEAD => 3, ?SHIP_X_POS_HEAD => 3,
     ?SHIP_Y_POS_HEAD => 3, ?SHIP_DIRECTION_HEAD => <<"w">>, ?SHIP_SIZE_HEAD => 3}, Map1, true),
   ?assertEqual(
     #{
@@ -75,7 +75,7 @@ check_n_place_h_test() ->
       8 => <<1, 1, 1, 1, 1, 1, 1, 1, 1, 1>>,
       9 => <<1, 1, 1, 1, 1, 1, 1, 1, 1, 1>>
     },
-  MapWithShip = ss_ship_logic:place_ship(#{?SHIP_ID_HEAD => 3, ?SHIP_X_POS_HEAD => 3,
+  MapWithShip = ss_map_logic:place_ship(#{?SHIP_ID_HEAD => 3, ?SHIP_X_POS_HEAD => 3,
     ?SHIP_Y_POS_HEAD => 3, ?SHIP_DIRECTION_HEAD => <<"h">>, ?SHIP_SIZE_HEAD => 3}, Map1, true),
   ?assertEqual(
     #{
@@ -119,5 +119,5 @@ place_complete_test() ->
       9 => <<3, 0, 0, 0, 0, 0, 0, 0, 0, 4>>
     },
   ?assertEqual(Expected,
-    ss_ship_logic:place_ships([Ship1, Ship2, Ship3, Ship4, Ship5, Ship6, Ship7, Ship8, Ship9, Ship10], #{?NEAR_PLACING_HEAD => true})),
+    ss_map_logic:place_ships([Ship1, Ship2, Ship3, Ship4, Ship5, Ship6, Ship7, Ship8, Ship9, Ship10], #{?NEAR_PLACING_HEAD => true})),
   ok.

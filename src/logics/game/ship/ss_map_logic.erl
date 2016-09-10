@@ -6,7 +6,7 @@
 %%% @end
 %%% Created : 02. Sep 2016 17:43
 %%%-------------------------------------------------------------------
--module(ss_ship_logic).
+-module(ss_map_logic).
 -author("tihon").
 
 -include("ss_headers.hrl").

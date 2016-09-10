@@ -79,7 +79,7 @@ prepare(_Event, State) ->
 
 prepare({ships, Ships}, _From, State = #state{rules = Rules, player1 = {_P1, _}}) ->
   set_flit_to_player(_From, State),
-  Reply = case ss_ship_logic:place_ships(Ships, Rules) of %TODO catch
+  Reply = case ss_map_logic:place_ships(Ships, Rules) of %TODO catch
             Fleet1 when is_list(Fleet1) -> ok;
             Error -> {false, Error}
           end,  %TODO change state if all fleets are set
