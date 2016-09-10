@@ -22,10 +22,8 @@
   terminate/3,
   code_change/4]).
 
--export(
-[
-  prepare/2, prepare/3  %two players should send their ship packages.
-]).
+-export([prepare/2, prepare/3]).  %two players should send their ship packages.
+-export([play/2, play/3]).  %playing game. Sending fire packages until game end (or disconnect)
 
 -define(SERVER, ?MODULE).
 
@@ -36,7 +34,7 @@
   player2 :: {pid(), binary()},
   fleet_player1 = [] :: map(),
   fleet_player2 = [] :: map(),
-  active = 1 :: pos_integer(),
+  active = 1 :: pos_integer(),  % 1 - player1, 2 - player2
   rules :: map()
 }).
 
@@ -77,16 +75,25 @@ init([GID, UID1, UID2, Rules]) ->
 prepare(_Event, State) ->
   {next_state, prepare, State}.
 
-prepare({ships, Ships}, _From, State = #state{rules = Rules, player1 = {_P1, _}}) ->
-  set_flit_to_player(_From, State),
-  Reply = case ss_map_logic:place_ships(Ships, Rules) of %TODO catch
-            Fleet1 when is_list(Fleet1) -> ok;
-            Error -> {false, Error}
-          end,  %TODO change state if all fleets are set
-  {reply, Reply, prepare, State#state{}};
+prepare({ships, Ships}, From, State = #state{rules = Rules}) ->
+  try ss_map_logic:place_ships(Ships, Rules) of
+    Map when is_map(Map) ->
+      {Action, UState} = set_flit_to_player(From, Map, State),  %TODO notify players - game started
+      {reply, true, Action, UState}
+  catch
+    throw:{error, Code} ->
+      {reply, {error, Code}, prepare, State}
+  end;
 prepare(_Event, _From, State) ->
   Reply = ok,
-  {reply, Reply, state_name, State}.
+  {reply, Reply, prepare, State}.
+
+play(_Event, State) ->
+  {next_state, play, State}.
+
+play(_Event, _From, State) ->
+  Reply = ok,
+  {reply, Reply, play, State}.
 
 -spec(handle_event(Event :: term(), StateName :: atom(),
     StateData :: #state{}) ->
@@ -135,5 +142,11 @@ code_change(_OldVsn, StateName, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 %% @private
-set_flit_to_player(SenderPid, #state{player1 = {SenderPid, _}}) -> fleet_player1;
-set_flit_to_player(SenderPid, #state{player2 = {SenderPid, _}}) -> fleet_player2.
+set_flit_to_player(SenderPid, Map, State = #state{player1 = {SenderPid, _}, fleet_player2 = []}) ->
+  {prepare, State#state{fleet_player1 = Map}};
+set_flit_to_player(SenderPid, Map, State = #state{player1 = {SenderPid, _}}) ->
+  {play, State#state{fleet_player1 = Map, active = 2}};
+set_flit_to_player(SenderPid, Map, State = #state{player2 = {SenderPid, _}, fleet_player1 = []}) ->
+  {prepare, State#state{fleet_player2 = Map}};
+set_flit_to_player(SenderPid, Map, State = #state{player2 = {SenderPid, _}}) ->
+  {play, State#state{fleet_player2 = Map, active = 1}}.
