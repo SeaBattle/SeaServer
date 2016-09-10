@@ -11,6 +11,8 @@
 
 -behaviour(gen_fsm).
 
+-include("ss_game.hrl").
+
 %% API
 -export([start_link/1, send_ships/2]).
 
@@ -26,17 +28,6 @@
 -export([play/2, play/3]).  %playing game. Sending fire packages until game end (or disconnect)
 
 -define(SERVER, ?MODULE).
-
--record(state,
-{
-  game_id :: binary(),
-  player1 :: {pid(), binary()},
-  player2 :: {pid(), binary()},
-  fleet_player1 = [] :: map(),
-  fleet_player2 = [] :: map(),
-  active = 1 :: pos_integer(),  % 1 - player1, 2 - player2
-  rules :: map()
-}).
 
 %%%===================================================================
 %%% API
@@ -61,29 +52,23 @@ start_link(Args = [GID | _]) -> %TODO gid is not atom. Register me in syn.
 %%%===================================================================
 
 -spec(init(Args :: term()) ->
-  {ok, StateName :: atom(), StateData :: #state{}} |
-  {ok, StateName :: atom(), StateData :: #state{}, timeout() | hibernate} |
+  {ok, StateName :: atom(), StateData :: #game_state{}} |
+  {ok, StateName :: atom(), StateData :: #game_state{}, timeout() | hibernate} |
   {stop, Reason :: term()} | ignore).
 init([GID, UID1, UID2, Rules]) ->
   Pid1 = ss_utils:uid_to_pid(UID1), %TODO use syn instead
   Pid2 = ss_utils:uid_to_pid(UID2),
   monitor(process, Pid1),
   monitor(process, Pid2),
-  RulesMap = ss_game_rules:decode_rules(Rules),
-  {ok, prepare, #state{game_id = GID, player1 = {Pid1, UID1}, player2 = {Pid2, UID2}, rules = RulesMap}}.
+  RulesMap = ss_rules_logic:decode_rules(Rules),
+  {ok, prepare, #game_state{game_id = GID, player1 = {Pid1, UID1}, player2 = {Pid2, UID2}, rules = RulesMap}}.
 
 prepare(_Event, State) ->
   {next_state, prepare, State}.
 
-prepare({ships, Ships}, From, State = #state{rules = Rules}) ->
-  try ss_map_logic:place_ships(Ships, Rules) of
-    Map when is_map(Map) ->
-      {Action, UState} = set_flit_to_player(From, Map, State),  %TODO notify players - game started
-      {reply, true, Action, UState}
-  catch
-    throw:{error, Code} ->
-      {reply, {error, Code}, prepare, State}
-  end;
+prepare({ships, Ships}, From, State) ->
+  {Action, Response, UState} = ss_game_logic:set_fleet(Ships, From, State),
+  {reply, Response, Action, UState};
 prepare(_Event, _From, State) ->
   Reply = ok,
   {reply, Reply, prepare, State}.
@@ -96,11 +81,11 @@ play(_Event, _From, State) ->
   {reply, Reply, play, State}.
 
 -spec(handle_event(Event :: term(), StateName :: atom(),
-    StateData :: #state{}) ->
-  {next_state, NextStateName :: atom(), NewStateData :: #state{}} |
-  {next_state, NextStateName :: atom(), NewStateData :: #state{},
+    StateData :: #game_state{}) ->
+  {next_state, NextStateName :: atom(), NewStateData :: #game_state{}} |
+  {next_state, NextStateName :: atom(), NewStateData :: #game_state{},
     timeout() | hibernate} |
-  {stop, Reason :: term(), NewStateData :: #state{}}).
+  {stop, Reason :: term(), NewStateData :: #game_state{}}).
 handle_event(_Event, StateName, State) ->
   {next_state, StateName, State}.
 
@@ -133,20 +118,11 @@ terminate(_Reason, _StateName, _State) ->
   ok.
 
 -spec(code_change(OldVsn :: term() | {down, term()}, StateName :: atom(),
-    StateData :: #state{}, Extra :: term()) ->
-  {ok, NextStateName :: atom(), NewStateData :: #state{}}).
+    StateData :: #game_state{}, Extra :: term()) ->
+  {ok, NextStateName :: atom(), NewStateData :: #game_state{}}).
 code_change(_OldVsn, StateName, State, _Extra) ->
   {ok, StateName, State}.
 
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
-%% @private
-set_flit_to_player(SenderPid, Map, State = #state{player1 = {SenderPid, _}, fleet_player2 = []}) ->
-  {prepare, State#state{fleet_player1 = Map}};
-set_flit_to_player(SenderPid, Map, State = #state{player1 = {SenderPid, _}}) ->
-  {play, State#state{fleet_player1 = Map, active = 2}};
-set_flit_to_player(SenderPid, Map, State = #state{player2 = {SenderPid, _}, fleet_player1 = []}) ->
-  {prepare, State#state{fleet_player2 = Map}};
-set_flit_to_player(SenderPid, Map, State = #state{player2 = {SenderPid, _}}) ->
-  {play, State#state{fleet_player2 = Map, active = 1}}.

@@ -6,7 +6,7 @@
 %%% @end
 %%% Created : 16. Aug 2016 18:13
 %%%-------------------------------------------------------------------
--module(ss_game_rules).
+-module(ss_rules_logic).
 -author("tihon").
 
 -include("ss_headers.hrl").

@@ -12,6 +12,7 @@
 
 -define(INCORRECT_SHIP_NUMBER, 401).
 -define(INCORRECT_SHIP_POSITION, 402).
+-define(WRONG_GAME, 403).
 
 -define(SERVER_ERROR, 500).
 

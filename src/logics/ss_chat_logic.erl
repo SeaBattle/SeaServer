@@ -6,7 +6,7 @@
 %%% @end
 %%% Created : 10. Jul 2016 13:22
 %%%-------------------------------------------------------------------
--module(ss_chat_logics).
+-module(ss_chat_logic).
 -author("tihon").
 
 %% API
