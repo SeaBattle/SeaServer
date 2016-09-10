@@ -24,5 +24,5 @@ pid_to_uid(Pid) when is_pid(Pid) ->
 replace_at(Binary, Start, Replacement)
   when is_binary(Binary), Start < byte_size(Binary), Start >= 0, Start + byte_size(Replacement) < byte_size(Binary) + 1 ->
   Before = binary:part(Binary, 0, Start),
-  After = binary:part(Binary, Start + 1, byte_size(Binary) - Start - byte_size(Replacement)),
+  After = binary:part(Binary, Start + byte_size(Replacement), byte_size(Binary) - Start - byte_size(Replacement)),
   <<Before/binary, Replacement/binary, After/binary>>.

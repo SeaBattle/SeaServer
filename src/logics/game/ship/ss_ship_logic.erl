@@ -29,7 +29,7 @@ place_ships(Ships, #{?NEAR_PLACING_HEAD := AllowNear}) ->
 %% @private
 place_ship(#{?SHIP_ID_HEAD := Id, ?SHIP_X_POS_HEAD := X,
   ?SHIP_Y_POS_HEAD := Y, ?SHIP_DIRECTION_HEAD := D, ?SHIP_SIZE_HEAD := Size}, Map, Near) ->
-  case can_be_placed(X, Y, D, Size, Near, Map) of
+  case can_be_placed(X, Y, D, Size, Map, Near) of
     true -> do_place_ship(Id, X, Y, D, Size, Map);
     false -> throw({error, ?INCORRECT_SHIP_POSITION})
   end.
@@ -121,14 +121,14 @@ null_or_more(N) -> N - 1.
 do_place_ship(Id, X, Y, <<"h">>, Size, Map) ->
   HorizontShip = get_horizont_line(Y, Map),
   UpdatedLine = ss_utils:replace_at(HorizontShip, X, <<<<Id>> || <<_:1>> <= <<0:Size>>>>),
-  Map#{X => UpdatedLine};
+  Map#{Y => UpdatedLine};
 do_place_ship(Id, X, Y, <<"w">>, Size, Map) ->
   lists:foldl(
     fun(N, Acc) ->
-      K = X + N,
+      K = Y + N,
       Line = get_horizont_line(K, Acc),
-      Acc#{K => ss_utils:replace_at(Line, Y, <<Id>>)}
-    end, Map, lists:seq(0, Size)).
+      Acc#{K => ss_utils:replace_at(Line, X, <<Id>>)}
+    end, Map, lists:seq(0, Size - 1)).
 
 %% @private
 empty_map() ->
