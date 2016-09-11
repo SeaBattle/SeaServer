@@ -14,6 +14,7 @@
 -include("ss_codes.hrl").
 
 -define(PROPER(A, B), A >= 0, A =< 9, B >= 0, B =< 9).
+-define(NORMAL(X), X =:= ?NORMAL_TYPE; X =:= ?MULTI_TYPE).
 
 %% API
 -export([set_fleet/3, fire/3]).
@@ -47,23 +48,33 @@ set_fleet(_, _, State) -> %fleet package was got from unknown player. May be wro
 
 %% Fire (or another action, which takes player's turn). Update map, change turn if needed,
 %% update players ships. If no ships left - end game.
-fire(#{?FIRE_TYPE := ?NORMAL_TYPE, ?FIRE_X := X, ?FIRE_Y := Y}, Pid, State) when ?PROPER(X, Y) -> %ordinary fire
+fire(Shot = #{?FIRE_TYPE_HEAD := X, ?SHOT_HEAD := Shots}, Pid, State = #game_state{shots_left = M}) when ?NORMAL(X), length(Shots) =:= M ->
   case State of
-    #game_state{player1 = {Pid, _}, player2 = {Pid2, _}, fleet_player2 = Map2, ships_player2 = Ships2, active = 0} -> %turn of player1 and he makes it
-      notify_player(Pid2, {fire, ?NORMAL_TYPE, X, Y}),
-      do_one_shot(Map2, X, Y, Ships2, State);
-    #game_state{player2 = {Pid, _}, player1 = {Pid1, _}, fleet_player1 = Map1, ships_player1 = Ships1, active = 1} -> %turn of player2 and he makes it
-      notify_player(Pid1, {fire, ?NORMAL_TYPE, X, Y}),
-      do_one_shot(Map1, X, Y, Ships1, State);
+    #game_state{player1 = {Pid, _}, player2 = {Pid2, _}, active = 0} -> %turn of player1 and he makes it
+      #game_state{fleet_player2 = Map2, ships_player2 = Ships2} = State,
+      notify_player(Pid2, {fire, Shot}),
+      lists:foldl(
+        fun
+          (_, {end_game, UState}) -> {end_game, UState};
+          (#{?FIRE_X_HEAD := X, ?FIRE_Y_HEAD := Y}, {_, _, UState}) ->
+            do_one_shot(Map2, X, Y, Ships2, UState#game_state{shots_left = M - 1})
+        end, State, Shots);
+    #game_state{player2 = {Pid, _}, player1 = {Pid1, _}, active = 1} -> %turn of player2 and he makes it
+      #game_state{fleet_player1 = Map1, ships_player1 = Ships1} = State,
+      notify_player(Pid1, {fire, Shot}),
+      lists:foldl(
+        fun
+          (_, {end_game, true, UState}) -> {end_game, true, UState};
+          (#{?FIRE_X_HEAD := X, ?FIRE_Y_HEAD := Y}, {_, _, UState}) ->
+            do_one_shot(Map1, X, Y, Ships1, UState#game_state{shots_left = M - 1})
+        end, State, Shots);
+    %TODO save shots_left from hits
     _ ->
       {play, {error, ?WRONG_TURN}, State}
-  end,
-  ok;
-%TODO NORMAL_MULTI_TYPE?
-%TODO repeat turn on multi hit
+  end;
 fire(Fire, Pid, State) ->
-  case maps:is_key(?FIRE_TYPE, Fire) of
-    false -> fire(Fire#{?FIRE_TYPE => ?NORMAL_TYPE}, Pid, State);  %default fire type is normal
+  case maps:is_key(?FIRE_TYPE_HEAD, Fire) of
+    false -> fire(Fire#{?FIRE_TYPE_HEAD => ?NORMAL_TYPE}, Pid, State);  %default fire type is normal
     true -> {play, {error, ?BAD_PACKAGE}, State}
   end.
 
@@ -73,25 +84,36 @@ do_one_shot(Map, X, Y, Ships, State = #game_state{player1 = {P1, _}, player2 = {
     {true, [], UMap2} ->   %ship was hit (no more ships for player)
       notify_active_player(P1, P2, N, win),
       notify_active_player(P1, P2, 1 - N, loose),
-      {end_game, true, State#game_state{fleet_player2 = UMap2, ships_player2 = []}};
+      {end_game, State#game_state{fleet_player2 = UMap2, ships_player2 = []}};
     {true, UShips2, UMap2} ->   %ship was hit
-      UState = change_turn_on_hit(UShips2, State),
+      UState = change_turn(true, State),
       {play, true, UState#game_state{fleet_player2 = UMap2, ships_player2 = UShips2}};
     {false, UMap2} ->  %miss, change turn
-      UN = 1 - N,
-      notify_active_player(P1, P2, UN, turn),
-      notify_active_player(P1, P2, 1 - UN, enemy_turn),
-      {play, false, State#game_state{fleet_player2 = UMap2, active = UN}}
+      UState = change_turn(false, State),
+      {play, false, UState#game_state{fleet_player2 = UMap2}}
   end.
 
 %% @private
-change_turn_on_hit([], _) -> endGame; %no more enemy ships left - end game
-change_turn_on_hit(_, State = #game_state{rules = #{?REPEAT_ON_HIT_HEAD := true}}) -> %repeat on hit - do another fire
+change_turn(false, State = #game_state{shots_left = 0, rules = #{?FIRES_PER_TURN_HEAD := M}}) ->   %miss, change turn
   #game_state{player1 = {P1, _}, player2 = {P2, _}, active = N} = State,
-  notify_active_player(P1, P2, N, turn),
+  notify_turn(P1, P2, 1 - N),
+  State#game_state{active = 1 - N, shots_left = M};
+change_turn(false, State) ->   %miss, do not change turn (other shots left)
   State;
-change_turn_on_hit(_, State = #game_state{rules = #{?REPEAT_ON_HIT_HEAD := false}, active = N}) ->  %no repeat on hit - turn changes
-  State#game_state{active = 1 - N}.
+change_turn(true, State = #game_state{rules = Rules, shots_left = 0}) ->   %hit, change turn (depends on rules)
+  #game_state{player1 = {P1, _}, player2 = {P2, _}, active = N} = State,
+  case Rules of
+    #{?REPEAT_ON_HIT_HEAD := true} -> %repeat turn on hit
+      notify_turn(P1, P2, N),
+      State;
+    #{?REPEAT_ON_HIT_HEAD := false, ?FIRES_PER_TURN_HEAD := M} ->  %no repeat on hit - change turn
+      notify_turn(P1, P2, 1 - N),
+      State#game_state{active = 1 - N, shots_left = M}
+  end;
+change_turn(true, State = #game_state{rules = #{?REPEAT_ON_HIT_HEAD := true}}) ->   %hit, add repeat for rules
+  {1, State};
+change_turn(true, State = #game_state{rules = #{?REPEAT_ON_HIT_HEAD := false}}) ->   %hit, no repeat
+  {0, State}.
 
 %% @private
 mark_fire(Map, X, Y, Ships) ->
@@ -122,6 +144,11 @@ form_ships(Ships) ->
     fun(#{?SHIP_ID_HEAD := Id, ?SHIP_SIZE_HEAD := Size}, Acc) ->
       [{Id, Size} | Acc]
     end, [], Ships).
+
+%% @private
+notify_turn(P1, P2, N) ->
+  notify_active_player(P1, P2, 1 - N, turn),
+  notify_active_player(P1, P2, N, enemy_turn).
 
 %% @private
 notify_active_player(Pid1, _, 0, Notification) -> notify_player(Pid1, Notification);

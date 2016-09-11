@@ -12,6 +12,7 @@
 -behaviour(gen_fsm).
 
 -include("ss_game.hrl").
+-include("ss_headers.hrl").
 
 %% API
 -export([start_link/1, send_ships/2, fire/2, count_statistics/1]).
@@ -67,8 +68,9 @@ init([GID, UID1, UID2, Rules]) ->
   Pid2 = ss_utils:uid_to_pid(UID2),
   monitor(process, Pid1),
   monitor(process, Pid2),
-  RulesMap = ss_rules_logic:decode_rules(Rules),
-  {ok, prepare, #game_state{game_id = GID, player1 = {Pid1, UID1}, player2 = {Pid2, UID2}, rules = RulesMap}}.
+  RulesMap = #{?FIRES_PER_TURN_HEAD := Shots} = ss_rules_logic:decode_rules(Rules),
+  {ok, prepare,
+    #game_state{game_id = GID, player1 = {Pid1, UID1}, player2 = {Pid2, UID2}, rules = RulesMap, shots_left = Shots}}.
 
 prepare(_Event, State) ->
   {next_state, prepare, State}.

@@ -45,7 +45,7 @@ join_game(_Packet) ->
 reject_game(_Packet) ->
   ok.
 
-send_ships(_Packet = #{?GAME_ID_HEAD := _GID, ?SHIPS := _Ships}) ->
+send_ships(_Packet = #{?GAME_ID_HEAD := _GID, ?SHIPS_HEAD := _Ships}) ->
   ok.
 
 fire(_Packet = #{?GAME_ID_HEAD := _GID}) ->
