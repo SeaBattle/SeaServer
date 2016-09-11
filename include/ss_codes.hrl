@@ -10,11 +10,15 @@
 
 -define(OK, 0).
 
+%% game codes
 -define(INCORRECT_SHIP_NUMBER, 401).
 -define(INCORRECT_SHIP_POSITION, 402).
 -define(WRONG_GAME, 403).
+-define(WRONG_TURN, 404).
 
+%% common errors
 -define(SERVER_ERROR, 500).
+-define(BAD_PACKAGE, 501).
 
 %% game service codes
 -define(GAME_STARTED, 100).       %other player just joined and game starts

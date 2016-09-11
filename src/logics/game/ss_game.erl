@@ -14,7 +14,7 @@
 -include("ss_game.hrl").
 
 %% API
--export([start_link/1, send_ships/2]).
+-export([start_link/1, send_ships/2, fire/2, count_statistics/1]).
 
 %% gen_fsm callbacks
 -export([init/1,
@@ -33,7 +33,14 @@
 %%% API
 %%%===================================================================
 send_ships(Gid, Ships) ->
-  gen_fsm:sync_send_event(Gid, {ships, Ships}).
+  gen_fsm:sync_send_event(Gid, {ships, Ships}). %TODO syn or call by pid
+
+fire(Gid, Fire) ->
+  gen_fsm:sync_send_event(Gid, {fire, Fire}). %TODO syn or call by pid
+
+-spec count_statistics(pid()) -> ok.
+count_statistics(Game) ->
+  gen_fsm:send_event(Game, statistics).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -76,6 +83,15 @@ prepare(_Event, _From, State) ->
 play(_Event, State) ->
   {next_state, play, State}.
 
+play({fire, Fire}, From, State) ->
+  case ss_game_logic:fire(Fire, From, State) of
+    {Action, Response, UState} ->
+      {reply, Response, Action, UState};
+    {end_game, Response, UState} ->
+      %TODO count statistics, terminate game
+      %TODO remove game from database (if was saved)
+      {reply, Response, end_game, UState}
+  end;
 play(_Event, _From, State) ->
   Reply = ok,
   {reply, Reply, play, State}.

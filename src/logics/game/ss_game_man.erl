@@ -17,7 +17,7 @@
 
 
 %% API
--export([fast_play/1, do_fire/1, send_ships/1, reject_game/1, join_game/1, create_game/1]).
+-export([fast_play/1, fire/1, send_ships/1, reject_game/1, join_game/1, create_game/1]).
 
 %% TODO allow fast play without rules and fetch rules from found game
 %% TODO users should have some limit on not ended games (and should exit such games)
@@ -48,7 +48,7 @@ reject_game(_Packet) ->
 send_ships(_Packet = #{?GAME_ID_HEAD := _GID, ?SHIPS := _Ships}) ->
   ok.
 
-do_fire(_Packet) ->
+fire(_Packet = #{?GAME_ID_HEAD := _GID}) ->
   ok.
 
 

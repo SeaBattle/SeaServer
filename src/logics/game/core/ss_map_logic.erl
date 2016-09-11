@@ -15,16 +15,35 @@
 -ifdef(TEST).
 -compile(export_all).
 -endif.
+
 -define(PROPER(A, B), A >= 0, A =< 9, B >= 0, B =< 9).
 -define(CHECK_SHIP_X(Line, X), 0 =:= binary:at(Line, X)).
 
 %% API
 -export([place_ships/2]).
 
+-spec place_ships(list(map()), map()) -> map().
 place_ships(Ships, #{?NEAR_PLACING_HEAD := AllowNear}) ->
   EmptyMap = empty_map(),
   lists:foldl(fun(Ship, Map) -> place_ship(Ship, Map, AllowNear) end, EmptyMap, Ships).
 
+-spec perform_fire(map(), pos_integer(), pos_integer()) -> {true, integer(), map()} | {false, map()}.
+perform_fire(Map, X, Y) ->
+  Line = get_horizont_line(Y, Map),
+  case set_fired(Line, X) of
+    {false, ULine} -> {false, Map#{Y => ULine}};
+    {true, N, ULine} -> {true, N, Map#{Y => ULine}}
+  end.
+
+
+%% @private
+set_fired(Line, X) ->
+  case binary:at(Line, X) of
+    0 -> {false, ss_utils:replace_at(Line, X, <<255>>)};  %miss
+    N when N =:= 255; N =:= 254 -> {false, Line};  %already shot (miss)
+    N when N > 0 ->   %ship
+      {true, N, ss_utils:replace_at(Line, X, <<254>>)}
+  end.
 
 %% @private
 place_ship(#{?SHIP_ID_HEAD := Id, ?SHIP_X_POS_HEAD := X,
