@@ -87,12 +87,12 @@ play(_Event, State) ->
 
 play({fire, Fire}, From, State) ->
   case ss_game_logic:fire(Fire, From, State) of
-    {Action, Response, UState} ->
-      {reply, Response, Action, UState};
     {end_game, Response, UState} ->
       %TODO count statistics, terminate game
       %TODO remove game from database (if was saved)
-      {reply, Response, end_game, UState}
+      {reply, Response, end_game, UState};
+    {Action, Response, UState} ->
+      {reply, Response, Action, UState}
   end;
 play(_Event, _From, State) ->
   Reply = ok,
