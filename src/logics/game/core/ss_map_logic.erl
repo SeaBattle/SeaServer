@@ -40,9 +40,9 @@ perform_fire(Map, X, Y) ->
 set_fired(Line, X) ->
   case binary:at(Line, X) of
     0 -> {false, ss_utils:replace_at(Line, X, <<255>>)};  %miss
-    N when N =:= 255; N =:= 254 -> {false, Line};  %already shot (miss)
+    N when N =:= 255; N > 100 -> {false, Line};  %already shot (miss)
     N when N > 0 ->   %ship
-      {true, N, ss_utils:replace_at(Line, X, <<254>>)}
+      {true, N, ss_utils:replace_at(Line, X, <<(255 - N)>>)}
   end.
 
 %% @private

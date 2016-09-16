@@ -13,6 +13,10 @@
 -include("ss_game.hrl").
 -include("ss_codes.hrl").
 
+-ifdef(TEST).
+-compile(export_all).
+-endif.
+
 -define(PROPER(A, B), A >= 0, A =< 9, B >= 0, B =< 9).
 -define(NORMAL(X), X =:= ?NORMAL_TYPE; X =:= ?MULTI_TYPE).
 
@@ -68,7 +72,7 @@ fire(Fire, Pid, State) ->
   end.
 
 %% @private
-do_fire(Shot, Shots, Map, Ships, Enemy, State) -> %TODO proper return format for players
+do_fire(Shot, Shots, Map, Ships, Enemy, State) -> %TODO proper return format for players  %TODO remove state
   case do_fire_cycle(Shots, Map, Ships) of
     {Hits, UMap, []} -> %all ships ended - end game
       notify_player(Enemy, {fire, Shot, loose}),
