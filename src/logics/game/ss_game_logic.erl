@@ -75,11 +75,11 @@ fire(Fire, Pid, State) ->
 do_fire(Shot, Shots, Map, Ships, Enemy, State) -> %TODO proper return format for players  %TODO remove state
   case do_fire_cycle(Shots, Map, Ships) of
     {Hits, UMap, []} -> %all ships ended - end game
-      notify_player(Enemy, {fire, Shot, loose}),
-      {end_game, {win, Hits}, UMap, [], State};
+      notify_player(Enemy, Shot#{?ACTION_HEAD => fire, ?PAYLOAD_HEAD => #{?ACTION_HEAD => loose}}),
+      {end_game, {Hits, win}, UMap, [], State};
     {Hits, UMap, UShips} ->
       {Change, UState} = change_turn(State, get_hits_num(UShips)),
-      notify_player(Enemy, {fire, Shot, {change, Change}}),
+      notify_player(Enemy, Shot#{?ACTION_HEAD => fire, ?CHANGE_TURN_HEAD => Change}),
       {play, {Hits, {change, Change}}, UMap, UShips, UState}
   end.
 
@@ -141,12 +141,12 @@ fire_at_ship(Ships, N) ->
   end.
 
 %% @private
-start_game(#game_state{player1 = {P1, _}, player2 = {P2, _}, active = ActiveNum}) ->
-  notify_player(P1, start),
-  notify_player(P2, start),
+start_game(#game_state{player1 = {P1, _}, player2 = {P2, _}, active = ActiveNum, game_id = GID}) ->
+  notify_player(P1, #{?GAME_ID_HEAD => GID, ?ACTION_HEAD => start}),
+  notify_player(P2, #{?GAME_ID_HEAD => GID, ?ACTION_HEAD => start}),
   case ActiveNum of %TODO change this, when go to map game_state
-    0 -> notify_turn(P1, P2);
-    1 -> notify_turn(P2, P1)
+    0 -> notify_turn(P1, P2, GID);
+    1 -> notify_turn(P2, P1, GID)
   end.
 
 %% @private
@@ -157,9 +157,9 @@ form_ships(Ships) ->
     end, [], Ships).
 
 %% @private
-notify_turn(P1, P2) ->
-  notify_player(P1, turn),
-  notify_player(P2, enemy_turn).
+notify_turn(P1, P2, GID) ->
+  notify_player(P1, #{?GAME_ID_HEAD => GID, ?ACTION_HEAD => turn}),
+  notify_player(P2, #{?GAME_ID_HEAD => GID, ?ACTION_HEAD => enemy_turn}).
 
-%% @private %TODO send messages format to players?
-notify_player(Pid, Notification) -> Pid ! Notification.
+%% @private
+notify_player(Pid, Notification) -> Pid ! {command, Notification}.

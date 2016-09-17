@@ -22,6 +22,8 @@
 -define(GAME_AWAIT_TTL_HEAD, <<"ttl">>).
 -define(RULES_HEAD, <<"rules">>).
 -define(GAME_ID_HEAD, <<"game_id">>).
+-define(ACTION_HEAD, <<"action">>).
+-define(PAYLOAD_HEAD, <<"payload">>).
 
 %% rules
 %how many time game should wait after terminating player for reconnect to make a technical win
@@ -48,3 +50,4 @@
 -define(FIRE_X_HEAD, <<"y">>).
 -define(FIRE_Y_HEAD, <<"x">>).
 -define(SHOT_HEAD, <<"shot">>).
+-define(CHANGE_TURN_HEAD, <<"change">>).
