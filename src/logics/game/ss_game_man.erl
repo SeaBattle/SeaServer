@@ -13,19 +13,17 @@
 -include("ss_headers.hrl").
 
 -define(DEFAULT_TTL, 5000). %5 sec
--define(FAST_GAME_PATH, "/play").
-
 
 %% API
--export([fast_play/1, fire/1, send_ships/1, reject_game/1, join_game/1, create_game/1]).
+-export([fast_play/2, fire/2, send_ships/2, reject_game/2, join_game/2, create_game/2]).
 
 %% TODO allow fast play without rules and fetch rules from found game
 %% TODO users should have some limit on not ended games (and should exit such games)
-fast_play(Packet = #{?VERSION_HEAD := Vsn, ?UID_HEAD := UID}) ->  %TODO may be save uid in thread as a state is more secure?
+fast_play(Packet = #{?VERSION_HEAD := Vsn, ?UID_HEAD := UID}, _US) ->  %TODO may be save uid in thread as a state is more secure?
   TTL = get_ttl(Packet),
   RulesKey = ss_rules_logic:encode_rules(Packet),
   Request = #{?GAME_AWAIT_TTL_HEAD => TTL, ?RULES_HEAD => RulesKey, ?UID_HEAD => UID, ?VERSION_HEAD => Vsn},
-  case ss_service_logic:request_host("127.0.0.1", ?FAST_GAME_PATH, jsone:encode(Request)) of
+  case ss_service_logic:request_host("127.0.0.1", "/play", jsone:encode(Request)) of
     #{?RESULT_HEAD := true, ?CODE_HEAD := ?OK, ?GAME_ID_HEAD := _GID, ?UID_HEAD := _EUID, ?RULES_HEAD := _Rules} ->  %game found
       %TODO create game and notify other user of game was created
       ok;
@@ -36,19 +34,19 @@ fast_play(Packet = #{?VERSION_HEAD := Vsn, ?UID_HEAD := UID}) ->  %TODO may be s
   end,
   ok.
 
-create_game(_Packet) ->
+create_game(_Packet, _US) ->
   ok.
 
-join_game(_Packet) ->
+join_game(_Packet, _US) ->
   ok.
 
-reject_game(_Packet) ->
+reject_game(_Packet, _US) ->
   ok.
 
-send_ships(_Packet = #{?GAME_ID_HEAD := _GID, ?SHIPS_HEAD := _Ships}) ->
+send_ships(_Packet = #{?GAME_ID_HEAD := _GID, ?SHIPS_HEAD := _Ships}, _US) ->
   ok.
 
-fire(_Packet = #{?GAME_ID_HEAD := _GID}) ->
+fire(_Packet = #{?GAME_ID_HEAD := _GID}, _US) ->
   ok.
 
 

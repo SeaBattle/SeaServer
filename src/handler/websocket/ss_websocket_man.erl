@@ -13,4 +13,12 @@
 -export([init/0]).
 
 init() ->
-  ok.
+  %TODO port from conf
+  Dispatch = cowboy_router:compile([
+    {'_', [
+      {"/game", ws_handler, []},
+      {'_', ss_notfound_handler, []}
+    ]}
+  ]),
+  {ok, _} = cowboy:start_http(http, 100, [{port, 8080}],
+    [{env, [{dispatch, Dispatch}]}]).
