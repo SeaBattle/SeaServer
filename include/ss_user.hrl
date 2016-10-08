@@ -11,5 +11,6 @@
 -record(user_state,
 {
   id :: binary(),
-  auth = false :: boolean()
+  auth = false :: boolean(),
+  self_pid :: pid()
 }).

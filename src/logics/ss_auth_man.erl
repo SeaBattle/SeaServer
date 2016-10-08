@@ -20,9 +20,11 @@
 %% API
 -export([auth_user/2]).
 
-auth_user(#{?UID_HEAD := Uid, ?SECRET_HEAD := Secret, ?USER_TOKEN := Token}, UserState) ->  %2 step
-  Result = ss_user_service:login(Uid, Secret, Token),
-  {Result, UserState#user_state{auth = Result}};
-auth_user(#{?UID_HEAD := Uid}, UserState) -> %1 step
-  true = ss_user_service:login(Uid),
-  {true, UserState}.
+auth_user(#{?UID_HEAD := Uid, ?USER_TOKEN := Token}, UserState = #user_state{self_pid = SelfPid}) ->
+  case ss_user_service:login(Uid, Token) of
+    true ->
+      ok = syn:register(Uid, SelfPid),
+      {true, UserState#user_state{auth = true, id = Uid}};
+    false ->
+      {false, UserState}
+  end.

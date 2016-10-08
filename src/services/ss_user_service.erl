@@ -12,13 +12,8 @@
 -include("ss_headers.hrl").
 
 %% API
--export([register/1, login/1, login/3]).
+-export([login/2]).
 
-register(_Email) ->
-  ok.
-
-login(_Uid) ->
-  ok.
-
-login(_Uid, _Token, _Service) ->
+-spec login(binary(), binary()) -> boolean().
+login(_Uid, _Token) ->
   ok.

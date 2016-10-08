@@ -30,6 +30,8 @@ end_per_testcase(_, Config) ->
 end_per_suite(Config) ->
   Config.
 
-test(_) ->
-  ct:pal("------------------~p------------------~n", [test]),
+test_create_game(_) ->
+  ct:pal("------------------~p------------------~n", [test_create_game]),
+
+
   ok.

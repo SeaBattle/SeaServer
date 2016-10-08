@@ -19,7 +19,7 @@ are binaries.
 
 #### Inviting to game
 
-#### Rejecting an invite
+#### Accepting|rejecting an invite
 
 #### Send ships to game
 

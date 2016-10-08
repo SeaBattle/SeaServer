@@ -9,14 +9,26 @@
 -module(ss_game_service).
 -author("tihon").
 
-%% API
--export([]).
+-include("ss_codes.hrl").
+-include("ss_headers.hrl").
 
-%%create_game() ->
-%%  ok.
-%%
-%%join_game() ->
-%%  ok.
-%%
-%%fast_play() ->
-%%  ok.
+%% API
+-export([fast_play/4]).
+
+create_game() ->
+  ok.
+
+join_game() ->
+  ok.
+
+-spec fast_play(binary(), binary(), binary(), integer()) -> {true, binary(), binary(), binary()} | false.
+fast_play(UID, VSN, Rules, TTL) ->
+  Request = #{?GAME_AWAIT_TTL_HEAD => TTL, ?RULES_HEAD => Rules, ?UID_HEAD => UID, ?VERSION_HEAD => VSN},
+  case ss_service_logic:request_host(<<"game_service">>, <<"/fast_play">>, jsone:encode(Request)) of
+    #{?RESULT_HEAD := true, ?CODE_HEAD := ?OK, ?GAME_ID_HEAD := GID, ?UID_HEAD := EUID, ?RULES_HEAD := GRules} ->  %game found, own rules
+      {true, GID, EUID, GRules};
+    #{?RESULT_HEAD := true, ?CODE_HEAD := ?OK, ?GAME_ID_HEAD := GID, ?UID_HEAD := EUID} ->  %game found, user rules
+      {true, GID, EUID, Rules};
+    #{?RESULT_HEAD := true, ?CODE_HEAD := ?WAITING_FOR_CONNECT} ->  %waiting for game (other player will start the game)
+      false   %%TODO make waiting sync?
+  end.

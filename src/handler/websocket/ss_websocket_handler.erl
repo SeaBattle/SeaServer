@@ -44,14 +44,16 @@ init(Req, _) ->
       {cowboy_websocket, Req2, State}
   end.
 
+websocket_handle({binary, Msg}, Req, State = #state{user_state = US = #user_state{self_pid = undefined}}) ->
+  process_message(Msg, Req, State#state{user_state = US#user_state{self_pid = self()}});
 websocket_handle({binary, Msg}, Req, State) ->
   process_message(Msg, Req, State);
 websocket_handle(_Data, Req, State) ->
   {ok, Req, State}.
 
-websocket_info({callback, Msg}, Req, State) ->
+websocket_info({callback, {Msg, US}}, Req, State) ->
   Package = ss_message_logic:encode(Msg),
-  {reply, {binary, Package}, Req, State};
+  {reply, {binary, Package}, Req, State = #state{user_state = US}}; %TODO recursive merge of old and new user state!
 websocket_info(disconnect, Req, State) ->
   {stop, Req, State};
 websocket_info(_Info, Req, State) ->
