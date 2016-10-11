@@ -9,6 +9,7 @@
 -module(ss_game_man).
 -author("tihon").
 
+-include("ss_codes.hrl").
 -include("ss_user.hrl").
 -include("ss_headers.hrl").
 
@@ -30,10 +31,21 @@ fast_play(Packet = #{?VERSION_HEAD := VSN}, US = #user_state{id = UID}) ->
           end,
   {Reply, US}.
 
-create_game(_Packet, _US) ->
-  ok.
+create_game(Packet = #{?VERSION_HEAD := VSN}, US = #user_state{id = UID}) ->
+  Rules = ss_rules_logic:encode_rules(Packet),
+  Private = maps:get(?PRIVATE_HEAD, Packet, false),
+  Reply = case ss_game_service:create_game(UID, VSN, Rules, Private) of
+            {true, GID} ->  %game was created
+              #{?CODE_HEAD => ?OK, ?GAME_ID_HEAD => GID};
+            {false, Code} ->  %error creating game
+              #{?CODE_HEAD => Code}
+          end,
+  {Reply, US}.
 
-invite_game(_Packet, _US) ->
+invite_game(Packet = #{?GAME_ID_HEAD := GID, ?UID_HEAD := EUID, ?RULES_HEAD := Rules}, US = #user_state{id = UID}) ->
+  %TODO check game belongs to UID
+  %TODO check game is not started
+  %TODO send invite to user
   ok.
 
 accept_game(_Packet, _US) ->

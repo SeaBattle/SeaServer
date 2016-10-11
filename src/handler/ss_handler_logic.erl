@@ -15,9 +15,12 @@
 -include("ss_user.hrl").
 
 -define(AUTH_CHECK, #{?PACKET_TYPE := ?AUTH_PACKET, ?UID_HEAD := _, ?TOKEN_HEAD := _}).
--define(CREATE_GAME_CHECK, #{?RULES_HEAD := _}).
--define(GAME_INVITE_CHECK, #{?GAME_ID_HEAD := _, ?UID_HEAD := _, ?RULES_HEAD := _}).
--define(GAME_ACCEPT_PACKET, #{?GAME_ID_HEAD := _, ?RESULT_HEAD := _}).
+-define(CREATE_GAME_CHECK, #{?PACKET_TYPE := ?GAME_CREATE_PACKET, ?RULES_HEAD := _}).
+-define(GAME_INVITE_CHECK, #{?PACKET_TYPE := ?GAME_INVITE_PACKET, ?GAME_ID_HEAD := _, ?UID_HEAD := _, ?RULES_HEAD := _}).
+-define(GAME_ACCEPT_CHECK, #{?PACKET_TYPE := ?GAME_ACCEPT_PACKET, ?GAME_ID_HEAD := _, ?RESULT_HEAD := _}).
+-define(SHIPS_CHECK, #{?PACKET_TYPE := ?GAME_SEND_SHIPS, ?SHIPS_HEAD := _}).
+-define(FIRE_CHECK, #{?PACKET_TYPE := ?GAME_FIRE, ?FIRE_TYPE_HEAD := _, ?SHOT_HEAD := _}).
+-define(FAST_PLAY_CHECK, #{?PACKET_TYPE := ?GAME_FAST_PLAY, ?VERSION_HEAD := _}).
 
 %% API
 -export([process_package/2]).
@@ -36,13 +39,13 @@ check_package(Packet = ?CREATE_GAME_CHECK, UserState = #user_state{auth = true})
   fun() -> ss_game_man:create_game(Packet, UserState) end;
 check_package(Packet = ?GAME_INVITE_CHECK, UserState = #user_state{auth = true}) ->
   fun() -> ss_game_man:invite_game(Packet, UserState) end;
-check_package(Packet = ?GAME_ACCEPT_PACKET, UserState = #user_state{auth = true}) ->
+check_package(Packet = ?GAME_ACCEPT_CHECK, UserState = #user_state{auth = true}) ->
   fun() -> ss_game_man:accept_game(Packet, UserState) end;
-check_package(Packet = #{?PACKET_TYPE := ?GAME_SEND_SHIPS}, UserState = #user_state{auth = true}) ->
+check_package(Packet = ?SHIPS_CHECK, UserState = #user_state{auth = true}) ->
   fun() -> ss_game_man:send_ships(Packet, UserState) end;
-check_package(Packet = #{?PACKET_TYPE := ?GAME_FIRE}, UserState = #user_state{auth = true}) ->
+check_package(Packet = ?FIRE_CHECK, UserState = #user_state{auth = true}) ->
   fun() -> ss_game_man:fire(Packet, UserState) end;
-check_package(Packet = #{?PACKET_TYPE := ?GAME_FAST_PLAY}, UserState = #user_state{auth = true}) ->
+check_package(Packet = ?FAST_PLAY_CHECK, UserState = #user_state{auth = true}) ->
   fun() -> ss_game_man:fast_play(Packet, UserState) end;
 check_package(_, _) ->
   {error, ?BAD_PACKAGE}.

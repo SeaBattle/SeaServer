@@ -28,6 +28,7 @@
 -define(ACTION_HEAD, <<"action">>).
 -define(PAYLOAD_HEAD, <<"payload">>).
 -define(TOKEN_HEAD, <<"token">>).
+-define(PRIVATE_HEAD, <<"private">>). %whether game can be found in game service or not
 
 %% rules
 %how many time game should wait after terminating player for reconnect to make a technical win
