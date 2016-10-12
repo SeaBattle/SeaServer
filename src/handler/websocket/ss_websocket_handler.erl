@@ -54,6 +54,9 @@ websocket_handle(_Data, Req, State) ->
 websocket_info({callback, {Msg, US}}, Req, State) ->
   Package = ss_message_logic:encode(Msg),
   {reply, {binary, Package}, Req, State = #state{user_state = US}}; %TODO recursive merge of old and new user state!
+websocket_info({package, Msg}, Req, State) ->
+  Package = ss_message_logic:encode(Msg),
+  {reply, {binary, Package}, Req, State};
 websocket_info(disconnect, Req, State) ->
   {stop, Req, State};
 websocket_info(_Info, Req, State) ->
@@ -68,7 +71,7 @@ process_message(Binary, Req, State = #state{user_state = UserState}) ->
   UState = renew_timer(State),
   case ss_message_logic:decode(Binary) of
     {ok, Message} ->
-      case ss_handler_logic:process_package(Message, UserState) of
+      case ss_handler_logic:process_package_from_client(Message, UserState) of
         ok -> {ok, Req, UState};
         {error, Code} -> reply_error(Code, Req, UState)
       end;

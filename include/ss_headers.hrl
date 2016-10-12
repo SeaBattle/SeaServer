@@ -14,11 +14,7 @@
 -define(CODE_HEAD, <<"code">>).
 
 %% logic headers
--define(EMAIL_HEAD, <<"email">>).  %user's unique email (or any other string)
 -define(UID_HEAD, <<"uid">>).    %user's unique id (is generated is su_user_logic as uuid)
--define(NAME_HEAD, <<"name">>).  %user's name
--define(LANG_HEAD, <<"lang">>).  %user's language (for password's email localisation)
--define(SECRET_HEAD, <<"secret">>).    %user's password (is generated in su_user_logic)
 -define(USER_TOKEN, <<"token">>).      %user is registered online by this token in su_user_logic
 -define(RESULT_HEAD, <<"result">>).
 -define(VERSION_HEAD, <<"vsn">>).
@@ -29,6 +25,7 @@
 -define(PAYLOAD_HEAD, <<"payload">>).
 -define(TOKEN_HEAD, <<"token">>).
 -define(PRIVATE_HEAD, <<"private">>). %whether game can be found in game service or not
+-define(FROM_HEAD, <<"from">>).
 
 %% rules
 %how many time game should wait after terminating player for reconnect to make a technical win

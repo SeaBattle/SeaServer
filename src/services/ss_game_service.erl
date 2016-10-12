@@ -13,9 +13,10 @@
 -include("ss_headers.hrl").
 
 %% API
--export([fast_play/4, create_game/4]).
+-export([fast_play/4, create_game/4, join_game/2]).
 
--spec create_game(binary(), binary(), binary(), boolean()) -> {true, binary()} | {false, integer()}.
+-spec create_game(ss_types:uid(), binary(), ss_types:rules_compressed(), boolean()) ->
+  {true, ss_types:gid()} | {false, ss_types:code()}.
 create_game(UID, VSN, Rules, Private) ->
   Request = #{?PRIVATE_HEAD => Private, ?RULES_HEAD => Rules, ?UID_HEAD => UID, ?VERSION_HEAD => VSN},
   case ss_service_logic:request_host(<<"game_service">>, <<"/create_game">>, jsone:encode(Request)) of
@@ -25,10 +26,19 @@ create_game(UID, VSN, Rules, Private) ->
       {false, Code}
   end.
 
-join_game() ->
-  ok.
+-spec join_game(ss_types:gid(), ss_types:uid()) ->
+  {true, ss_types:uid(), ss_types:rules_compressed()} | {false, ss_types:code()}.
+join_game(GID, UID) ->
+  Request = #{?GAME_ID_HEAD => GID, ?UID_HEAD => UID},
+  case ss_service_logic:request_host(<<"game_service">>, <<"/join_game">>, jsone:encode(Request)) of
+    #{?RESULT_HEAD := true, ?UID_HEAD := EUID, ?RULES_HEAD := Rules} ->  %joined game, got enemy uid
+      {true, EUID, Rules};
+    #{?RESULT_HEAD := false, ?CODE_HEAD := Code} ->  %can't connect to game (game is not available or smth else)
+      {false, Code}
+  end.
 
--spec fast_play(binary(), binary(), binary(), integer()) -> {true, binary(), binary(), binary()} | false.
+-spec fast_play(ss_types:uid(), binary(), ss_types:rules_compressed(), integer()) ->
+  {true, ss_types:gid(), ss_types:uid(), binary()} | false.
 fast_play(UID, VSN, Rules, TTL) ->
   Request = #{?GAME_AWAIT_TTL_HEAD => TTL, ?RULES_HEAD => Rules, ?UID_HEAD => UID, ?VERSION_HEAD => VSN},
   case ss_service_logic:request_host(<<"game_service">>, <<"/fast_play">>, jsone:encode(Request)) of

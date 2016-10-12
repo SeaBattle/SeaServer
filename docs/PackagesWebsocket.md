@@ -21,6 +21,8 @@ are binaries.
 
 #### Accepting|rejecting an invite
 
+#### Joining new|existing game
+
 #### Send ships to game
 
 #### Starting a game

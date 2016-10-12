@@ -10,7 +10,7 @@
 
 -record(user_state,
 {
-  id :: binary(),
+  id :: ss_types:uid(),
   auth = false :: boolean(),
   self_pid :: pid()
 }).

@@ -22,7 +22,7 @@
 %% API
 -export([place_ships/2]).
 
--spec place_ships(list(map()), map()) -> map().
+-spec place_ships(list(map()), ss_types:rules_full()) -> map().
 place_ships(Ships, #{?NEAR_PLACING_HEAD := AllowNear}) ->
   EmptyMap = empty_map(),
   lists:foldl(fun(Ship, Map) -> place_ship(Ship, Map, AllowNear) end, EmptyMap, Ships).

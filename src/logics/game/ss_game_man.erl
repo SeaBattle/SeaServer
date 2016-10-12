@@ -12,11 +12,12 @@
 -include("ss_codes.hrl").
 -include("ss_user.hrl").
 -include("ss_headers.hrl").
+-include("ss_packet_type.hrl").
 
 -define(DEFAULT_TTL, 5000). %5 sec
 
 %% API
--export([fast_play/2, fire/2, send_ships/2, accept_game/2, invite_game/2, create_game/2]).
+-export([fast_play/2, fire/2, send_ships/2, accept_game/2, invite_game/2, create_game/2, join_game/2]).
 
 %% TODO allow fast play without rules and fetch rules from found game
 %% TODO users should have some limit on not ended games (and should exit such games)
@@ -31,6 +32,7 @@ fast_play(Packet = #{?VERSION_HEAD := VSN}, US = #user_state{id = UID}) ->
           end,
   {Reply, US}.
 
+%% register game creation in game service, get registered game_id if ok
 create_game(Packet = #{?VERSION_HEAD := VSN}, US = #user_state{id = UID}) ->
   Rules = ss_rules_logic:encode_rules(Packet),
   Private = maps:get(?PRIVATE_HEAD, Packet, false),
@@ -42,14 +44,55 @@ create_game(Packet = #{?VERSION_HEAD := VSN}, US = #user_state{id = UID}) ->
           end,
   {Reply, US}.
 
-invite_game(Packet = #{?GAME_ID_HEAD := GID, ?UID_HEAD := EUID, ?RULES_HEAD := Rules}, US = #user_state{id = UID}) ->
-  %TODO check game belongs to UID
-  %TODO check game is not started
-  %TODO send invite to user
-  ok.
+%% find online user and send him an invite
+invite_game(Packet = #{?GAME_ID_HEAD := GID, ?UID_HEAD := EUID}, US = #user_state{id = UID}) ->
+  Rules = ss_rules_logic:encode_rules(Packet),
+  Package = #{?PACKET_TYPE => ?GAME_INVITE_PACKET, ?GAME_ID_HEAD => GID, ?UID_HEAD => UID, ?RULES_HEAD => Rules},
+  Reply = case ss_messaging_logic:online_message(EUID, UID, Package) of %TODO offline invites sending
+            true ->
+              #{?CODE_HEAD => ?OK};
+            false ->
+              #{?CODE_HEAD => ?USER_OFFLINE}
+          end,
+  {Reply, US}.
 
-accept_game(_Packet, _US) ->
-  ok.
+%% accept|decline invitation to game
+accept_game(#{?GAME_ID_HEAD := GID, ?RESULT_HEAD := false, ?UID_HEAD := EUID}, US = #user_state{id = UID}) -> %decline - just notify host
+  Reply =
+    case ss_messaging_logic:online_message(EUID, UID,
+      #{?PACKET_TYPE => ?GAME_ACCEPT_PACKET, ?RESULT_HEAD => false, ?GAME_ID_HEAD => GID}) of
+      true ->
+        #{?CODE_HEAD => ?OK};
+      false ->  %TODO offline invites sending
+        #{?CODE_HEAD => ?USER_OFFLINE}
+    end,
+  {Reply, US};
+accept_game(#{?GAME_ID_HEAD := GID, ?RESULT_HEAD := true}, US = #user_state{id = UID}) -> %accept - try to catch game and notify host
+  Reply = case ss_game_service:join_game(GID, UID) of
+            {true, CreatorUID, Rules} -> %joined the game
+              case ss_messaging_logic:online_message(CreatorUID, UID,
+                #{?PACKET_TYPE => ?GAME_ACCEPT_PACKET, ?RESULT_HEAD => false, ?GAME_ID_HEAD => GID}) of
+                true -> %user notified. Create game.
+                  start_game(UID, CreatorUID, GID, Rules),
+                  #{?CODE_HEAD => ?OK};
+                false ->  %TODO offline invites sending
+                  #{?CODE_HEAD => ?USER_OFFLINE}
+              end;
+            {false, Code} ->  %can't join the game (no game or another player already join it)
+              #{?CODE_HEAD => Code}
+          end,
+  {Reply, US}.
+
+join_game(#{?GAME_ID_HEAD := GID}, US = #user_state{id = UID, self_pid = UserPid}) ->
+  Reply = case find_game(GID, 2000) of
+            undefined -> #{?CODE_HEAD => ?WRONG_GAME};
+            {ok, Pid} ->
+              case ss_game:try_join_game(Pid, UID, UserPid) of
+                true -> #{?CODE_HEAD => ?OK};
+                false -> #{?CODE_HEAD => ?WRONG_USER}
+              end
+          end,
+  {Reply, US}.
 
 send_ships(_Packet = #{?GAME_ID_HEAD := _GID, ?SHIPS_HEAD := _Ships}, _US) ->
   ok.
@@ -65,7 +108,7 @@ get_ttl(_) -> ?DEFAULT_TTL.
 
 %% @private
 start_game(Uid, EUID, GID, Rules) ->
-  {ok, Pid} = ss_game_sup:start_game(GID, Uid, EUID, Rules).
+  {ok, _} = ss_game_sup:start_game(GID, Uid, EUID, Rules).
 
 %% @private
 %% Find created game by game id.

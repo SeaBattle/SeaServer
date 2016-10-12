@@ -15,7 +15,7 @@
 -include("ss_headers.hrl").
 
 %% API
--export([start_link/1, send_ships/2, fire/2, count_statistics/1]).
+-export([start_link/1, send_ships/2, fire/2, count_statistics/1, try_join_game/3]).
 
 %% gen_fsm callbacks
 -export([init/1,
@@ -34,14 +34,18 @@
 %%% API
 %%%===================================================================
 send_ships(Gid, Ships) ->
-  gen_fsm:sync_send_event(Gid, {ships, Ships}). %TODO syn or call by pid
+  gen_fsm:sync_send_event(Gid, {ships, Ships}).
 
 fire(Gid, Fire) ->
-  gen_fsm:sync_send_event(Gid, {fire, Fire}). %TODO syn or call by pid
+  gen_fsm:sync_send_event(Gid, {fire, Fire}).
 
 -spec count_statistics(pid()) -> ok.
 count_statistics(Game) ->
   gen_fsm:send_event(Game, statistics).
+
+-spec try_join_game(pid(), ss_types:uid(), pid()) -> boolean().
+try_join_game(Game, UID, Pid) ->
+  gen_fsm:sync_send_all_state_event(Game, {join, UID, Pid}).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -52,8 +56,8 @@ count_statistics(Game) ->
 %% @end
 %%--------------------------------------------------------------------
 -spec(start_link(list()) -> {ok, pid()} | ignore | {error, Reason :: term()}).
-start_link(Args = [GID | _]) -> %TODO gid is not atom. Register me in syn.
-  gen_fsm:start_link({global, GID}, ?MODULE, Args, []).
+start_link(Args) ->
+  gen_fsm:start_link(?MODULE, Args, []).
 
 %%%===================================================================
 %%% gen_fsm callbacks
@@ -64,10 +68,11 @@ start_link(Args = [GID | _]) -> %TODO gid is not atom. Register me in syn.
   {ok, StateName :: atom(), StateData :: #game_state{}, timeout() | hibernate} |
   {stop, Reason :: term()} | ignore).
 init([GID, UID1, UID2, Rules]) ->
-  Pid1 = ss_utils:uid_to_pid(UID1), %TODO use syn instead
-  Pid2 = ss_utils:uid_to_pid(UID2),
-  monitor(process, Pid1),
-  monitor(process, Pid2),
+  Pid1 = syn:find_by_key(UID1),
+  Pid2 = syn:find_by_key(UID2),
+  _Ref1 = monitor(process, Pid1), %TODO save refs to state?
+  _Ref2 = monitor(process, Pid2),
+  ok = syn:register(GID, self()),
   RulesMap = #{?FIRES_PER_TURN_HEAD := Shots} = ss_rules_logic:decode_rules(Rules),
   {ok, prepare,
     #game_state{game_id = GID, player1 = {Pid1, UID1}, player2 = {Pid2, UID2}, rules = RulesMap, shots_left = Shots}}.
@@ -107,16 +112,15 @@ play(_Event, _From, State) ->
 handle_event(_Event, StateName, State) ->
   {next_state, StateName, State}.
 
--spec(handle_sync_event(Event :: term(), From :: {pid(), Tag :: term()},
-    StateName :: atom(), StateData :: term()) ->
-  {reply, Reply :: term(), NextStateName :: atom(), NewStateData :: term()} |
-  {reply, Reply :: term(), NextStateName :: atom(), NewStateData :: term(),
-    timeout() | hibernate} |
-  {next_state, NextStateName :: atom(), NewStateData :: term()} |
-  {next_state, NextStateName :: atom(), NewStateData :: term(),
-    timeout() | hibernate} |
-  {stop, Reason :: term(), Reply :: term(), NewStateData :: term()} |
-  {stop, Reason :: term(), NewStateData :: term()}).
+handle_sync_event({join, UID, Pid}, _From, StateName, State = #game_state{player1 = P1, player2 = P2}) ->  %TODO do we need to change state?
+  {_, U1} = P1, {_, U2} = P2,
+  case UID of %TODO check if all players are online - what should we do?
+    UID when UID =:= U1; UID =:= U2 ->
+      monitor(process, Pid),  %TODO map instead game_state %TODO save pid to state_map
+      {reply, true, StateName, State};
+    _ ->
+      {reply, false, StateName, State}
+  end;
 handle_sync_event(_Event, _From, StateName, State) ->
   Reply = ok,
   {reply, Reply, StateName, State}.

@@ -34,4 +34,4 @@ request_host(Service, Request, Body) ->
 
 %% @private
 get_random_host(_Service) ->
-  ok.
+  [].

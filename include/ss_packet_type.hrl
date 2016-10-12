@@ -19,6 +19,7 @@
 -define(GAME_START_PACKET, game_start).   %game starts (is sending to all players by server) when all players send their ships
 -define(GAME_FIRE, game_fire).  %user makes his turn
 -define(GAME_FAST_PLAY, game_fast_play).  %user wants to join random game.
+-define(GAME_JOIN_PACKET, game_join). %user wants to join game by gid.
 
 %% System
 -define(ERROR_PACKET, error).

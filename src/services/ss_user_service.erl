@@ -14,6 +14,6 @@
 %% API
 -export([login/2]).
 
--spec login(binary(), binary()) -> boolean().
+-spec login(ss_types:uid(), binary()) -> boolean().
 login(_Uid, _Token) ->
   ok.
