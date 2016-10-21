@@ -1,40 +1,30 @@
 PROJECT = seaserver
 
 DIALYZER = dialyzer
-REBAR = $(shell which rebar || echo ./rebar)
 
 all: app
 
 # Application.
 
 deps:
-	@$(REBAR) update-deps
+	git submodule update --init --recursive
 
 app: deps
-	@$(REBAR) compile generate
+	./rebar3 compile release
 
 clean:
-	@$(REBAR) clean
+	./rebar3 clean
 	rm -f test/*.beam
 	rm -f erl_crash.dump
-
-docs: clean-docs
-	@$(REBAR) doc skip_deps=true
-
-clean-docs:
-	rm -f doc/*.css
-	rm -f doc/*.html
-	rm -f doc/*.png
-	rm -f doc/edoc-info
 
 # Tests.
 tests: clean app eunit ct
 
 eunit:
-	@$(REBAR) eunit skip_deps=true
+	./rebar3 eunit skip_deps=true
 
 ct:
-	@$(REBAR) ct skip_deps=true
+	./rebar3 ct skip_deps=true
 
 # Dialyzer.
 .$(PROJECT).plt:
