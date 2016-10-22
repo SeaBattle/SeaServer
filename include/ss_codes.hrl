@@ -26,3 +26,4 @@
 -define(GAME_NOT_AVAILABLE, 101). %no game for such GID was found
 -define(WAITING_FOR_CONNECT, 102).  %fast play is not able to find ready game, so it creates game and wait for connection
 -define(USER_OFFLINE, 103).     %user is not for online play
+-define(GAME_NOT_READY, 104). %search for fast play can't find game for player and will wait for player.

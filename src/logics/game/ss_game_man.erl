@@ -25,10 +25,11 @@ fast_play(Packet = #{?VERSION_HEAD := VSN}, US = #user_state{id = UID}) ->
   TTL = get_ttl(Packet),
   Rules = ss_rules_logic:encode_rules(Packet),
   Reply = case ss_game_service:fast_play(UID, VSN, Rules, TTL) of
-            {true, GID, EUID, GRules} ->  %game is ready
-              find_game(GID, 2000);
-            false ->  %will wait for the game
-              ok
+            {true, GID, EUID, GRules} ->  %game was found
+              start_game(UID, EUID, GID, Rules),
+              #{?CODE_HEAD => ?OK, ?GAME_ID_HEAD => GID, ?UID_HEAD => EUID, ?RULES_HEAD => GRules};
+            false ->  %will wait for the game (game will be created by other player join)
+              #{?CODE_HEAD => ?GAME_NOT_READY}
           end,
   {Reply, US}.
 
@@ -94,11 +95,27 @@ join_game(#{?GAME_ID_HEAD := GID}, US = #user_state{id = UID, self_pid = UserPid
           end,
   {Reply, US}.
 
-send_ships(_Packet = #{?GAME_ID_HEAD := _GID, ?SHIPS_HEAD := _Ships}, _US) ->
-  ok.
+send_ships(#{?GAME_ID_HEAD := GID, ?SHIPS_HEAD := Ships}, US) ->
+  Reply = case find_game(GID, 2000) of
+            undefined -> #{?CODE_HEAD => ?WRONG_GAME};
+            {ok, Pid} -> %TODO find game in db?
+              case ss_game:send_ships(Pid, Ships) of
+                true -> #{?CODE_HEAD => ?OK};
+                {error, Code} -> #{?CODE_HEAD => Code}
+              end
+          end,
+  {Reply, US}.
 
-fire(_Packet = #{?GAME_ID_HEAD := _GID}, _US) ->
-  ok.
+fire(#{?GAME_ID_HEAD := GID, ?FIRE_HEAD := Fire}, US) ->
+  Reply = case find_game(GID, 2000) of
+            undefined -> #{?CODE_HEAD => ?WRONG_GAME};
+            {ok, Pid} -> %TODO find game in db?
+              case ss_game:fire(Pid, Fire) of
+                true -> #{?CODE_HEAD => ?OK};
+                {error, Code} -> #{?CODE_HEAD => Code}
+              end
+          end,
+  {Reply, US}.
 
 
 %% @private

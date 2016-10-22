@@ -47,6 +47,7 @@
 -define(SHIP_SIZE_HEAD, <<"size">>).
 
 %% game
+-define(FIRE_HEAD, <<"fire">>).
 -define(SHIPS_HEAD, <<"ships">>).  %ships array with {id, size, x, y, w} position
 -define(FIRE_TYPE_HEAD, <<"type">>).
 -define(FIRE_X_HEAD, <<"y">>).

@@ -33,11 +33,12 @@
 %%%===================================================================
 %%% API
 %%%===================================================================
-send_ships(Gid, Ships) ->
-  gen_fsm:sync_send_event(Gid, {ships, Ships}).
+-spec send_ships(pid(), list(map())) -> true | {error, ss_types:code()}.
+send_ships(Game, Ships) ->
+  gen_fsm:sync_send_event(Game, {ships, Ships}).
 
-fire(Gid, Fire) ->
-  gen_fsm:sync_send_event(Gid, {fire, Fire}).
+fire(Game, Fire) ->
+  gen_fsm:sync_send_event(Game, {fire, Fire}).
 
 -spec count_statistics(pid()) -> ok.
 count_statistics(Game) ->
