@@ -20,7 +20,7 @@
 -define(CHECK_SHIP_X(Line, X), 0 =:= binary:at(Line, X)).
 
 %% API
--export([place_ships/2]).
+-export([place_ships/2, perform_fire/3]).
 
 -spec place_ships(list(map()), ss_types:rules_full()) -> map().
 place_ships(Ships, #{?NEAR_PLACING_HEAD := AllowNear}) ->
@@ -132,9 +132,6 @@ incr(S, C, N) when C + S + N > 10, N =:= 2 -> incr(S, C, 1);
 incr(S, C, N) when C + S + N > 10, N =:= 1 -> S;
 incr(S, _, N) -> S + N.
 
-%% @private
-null_or_more(0) -> 0;
-null_or_more(N) -> N - 1.
 
 %% @private
 do_place_ship(Id, X, Y, <<"h">>, Size, Map) ->
