@@ -2,15 +2,18 @@ PROJECT = seaserver
 
 DIALYZER = dialyzer
 
-all: app
+all: rel
 
 # Application.
 
 deps:
 	git submodule update --init --recursive
 
-app: deps
-	./rebar3 compile release
+build:  deps
+	./rebar3 compile
+
+rel: build
+	./rebar3 release
 
 clean:
 	./rebar3 clean

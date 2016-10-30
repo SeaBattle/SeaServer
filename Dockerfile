@@ -23,10 +23,10 @@ RUN apk update && \
 
 EXPOSE 8080
 WORKDIR /opt/app
-COPY . .
 ENV REBAR_PROFILE=prod
+COPY . .
 RUN wget https://s3.amazonaws.com/rebar3/rebar3 && \
     chmod +x rebar3 && \
     make
 
-CMD ["/opt/app/rel/seaserver/bin/seaserver", "foreground"]
+CMD ["/opt/app/_build/prod/rel/seaserver/bin/seaserver", "foreground"]

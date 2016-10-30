@@ -16,8 +16,7 @@
 
 -define(MSGPACK, <<"msgpack">>).
 -define(SUPPORTED_PROTOCOLS, [?MSGPACK]).
--define(PING_DISCONNECT_TTL, <<"ping_disconnect">>).
--define(DEFAULT_DISCONNECT, 15000). %15sec
+-define(DEFAULT_DISCONNECT, <<"15000">>). %15sec
 
 %% API
 -export([init/2]).
@@ -38,7 +37,7 @@ init(Req, _) ->
       Req2 = ss_notfound_handler:reply(Req),
       {ok, Req2, undefined};
     true ->
-      Ping = binary_to_integer(sc_conf_holder:get_conf(?PING_DISCONNECT_TTL, ?DEFAULT_DISCONNECT)),
+      Ping = binary_to_integer(?DEFAULT_DISCONNECT),  %TODO load from configuration
       Req2 = cowboy_req:set_resp_header(<<"sec-websocket-protocol">>, <<"msgpack">>, Req),
       State = renew_timer(#state{ping = Ping}),
       {cowboy_websocket, Req2, State}

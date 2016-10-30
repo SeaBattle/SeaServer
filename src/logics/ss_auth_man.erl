@@ -12,7 +12,6 @@
 -include("ss_codes.hrl").
 -include("ss_headers.hrl").
 -include("ss_user.hrl").
--include_lib("seaconfig/include/sc_headers.hrl").
 
 -define(REGISTER_PATH, "/register").
 -define(LOGIN_PATH, "/login").

@@ -12,13 +12,11 @@
 -define(TCP_PROTOCOL, <<"tcp">>).
 -define(WEBSOCKET_PROTOCOL, <<"websocket">>).
 
--include_lib("seaconfig/include/sc_headers.hrl").
-
 %% API
 -export([init/0]).
 
 init() ->
-  Protocols = sc_conf_holder:get_conf(?SEASERVER_HANDLER_PROTOCOLS, <<"tcp">>),
+  Protocols = ?TCP_PROTOCOL,  %TODO load from configuration
   Splitted = binary:split(Protocols, <<",">>),
   lists:foreach(fun init_protocol/1, Splitted).
 
