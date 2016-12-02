@@ -8,3 +8,5 @@ deps/
 include/*_pb.hrl
 .rebar
 /.eunit/
+/_build/
+*.lock
