@@ -3,7 +3,7 @@ FROM alpine:3.4
 MAINTAINER com.tihon <com.tihon@mail.ru>
 
 RUN apk update && \
- apk add --no-cache git grep build-base wget openssl && \
+ apk add --no-cache git openssh-client grep build-base wget openssl && \
  apk add --no-cache erlang \
  erlang-tools \
  erlang-runtime-tools \
